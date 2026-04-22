@@ -801,13 +801,6 @@ function App() {
       .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
   , [projectTasks]);
 
-  /* Planning post stats for dashboard */
-  const postStats = useMemo(() => {
-    const counts = { total: projectPosts.length, Published: 0, 'In Progress': 0, Planned: 0, Cancelled: 0 };
-    projectPosts.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
-    return counts;
-  }, [projectPosts]);
-
   const inProgressTasks = useMemo(() =>
     projectTasks.filter(t => getStatus(t) === 'inProgress').slice(0, 4)
   , [projectTasks]);
@@ -819,6 +812,13 @@ function App() {
 
   // Planning posts scoped to current project
   const projectPosts = useMemo(() => posts.filter(p => p.projectId === currentProjectId), [posts, currentProjectId]);
+
+  /* Planning post stats for dashboard */
+  const postStats = useMemo(() => {
+    const counts = { total: projectPosts.length, Published: 0, 'In Progress': 0, Planned: 0, Cancelled: 0 };
+    projectPosts.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
+    return counts;
+  }, [projectPosts]);
 
   const filteredPosts = useMemo(() => {
     let arr = projectPosts.filter(p => {
