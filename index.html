@@ -865,7 +865,8 @@ function App() {
   }, [projectTasks, teamMembers]);
 
   const filtered = useMemo(() => {
-    let arr = projectTasks.filter(t => {
+    // Regular tasks with an __itemType marker
+    const taskItems = projectTasks.filter(t => {
       if (filterStatus !== 'all' && getStatus(t) !== filterStatus) return false;
       if (filterCategory !== 'all' && t.category !== filterCategory) return false;
       if (filterPerson !== 'all' && t.person !== filterPerson) return false;
@@ -874,14 +875,41 @@ function App() {
         if (!`${t.title} ${t.person} ${t.notes || ''}`.toLowerCase().includes(q)) return false;
       }
       return true;
-    });
-    arr.sort((a, b) => {
-      const da = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-      const db = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+    }).map(t => ({ ...t, __itemType: 'task' }));
+
+    // Planning posts shown as cards. Filters:
+    // - status filter: only applies if "In Progress" selected (maps to InProgress posts)
+    //   Else we show Published/Planned posts too. We'll just skip status filter for posts.
+    // - category filter: posts don't have category → skip unless filter is 'all'
+    // - person filter: match post.person
+    // - search: title-like is post.copy, plus topicType and person
+    const postItems = projectPosts.filter(p => {
+      // Hide posts if a specific category is selected (posts don't have categories)
+      if (filterCategory !== 'all') return false;
+      if (filterPerson !== 'all' && p.person !== filterPerson) return false;
+      // Map task status filter to post status roughly
+      if (filterStatus !== 'all') {
+        const map = { inProgress: 'In Progress', done: 'Published', notStarted: 'Planned' };
+        if (filterStatus === 'overdue') return false; // posts don't have overdue concept
+        if (map[filterStatus] && p.status !== map[filterStatus]) return false;
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        const haystack = `${p.copy || ''} ${p.topicType || ''} ${p.person || ''} ${p.channel || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    }).map(p => ({ ...p, __itemType: 'post' }));
+
+    const all = [...taskItems, ...postItems];
+    // Sort by date (deadline for tasks, date for posts)
+    all.sort((a, b) => {
+      const da = a.__itemType === 'task' ? (a.deadline ? new Date(a.deadline).getTime() : Infinity) : (a.date ? new Date(a.date).getTime() : Infinity);
+      const db = b.__itemType === 'task' ? (b.deadline ? new Date(b.deadline).getTime() : Infinity) : (b.date ? new Date(b.date).getTime() : Infinity);
       return da - db;
     });
-    return arr;
-  }, [projectTasks, filterStatus, filterCategory, filterPerson, search]);
+    return all;
+  }, [projectTasks, projectPosts, filterStatus, filterCategory, filterPerson, search]);
 
   return (
     <div
@@ -987,13 +1015,21 @@ function App() {
                 <EmptyState onAdd={() => { setEditing(null); setShowModal(true); }} hasTasks={tasks.length > 0} />
               ) : (
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
-                  {filtered.map(t => (
-                    <TaskCard
-                      key={t.id} task={t}
-                      onEdit={() => { setEditing(t); setShowModal(true); }}
-                      onDelete={() => deleteTask(t.id)}
-                      onProgress={(p) => updateProgress(t.id, p)}
-                    />
+                  {filtered.map(item => (
+                    item.__itemType === 'post' ? (
+                      <PostCard
+                        key={`p-${item.id}`} post={item}
+                        onEdit={() => { setEditingPost(item); setShowPostModal(true); }}
+                        onDelete={() => deletePost(item.id)}
+                      />
+                    ) : (
+                      <TaskCard
+                        key={`t-${item.id}`} task={item}
+                        onEdit={() => { setEditing(item); setShowModal(true); }}
+                        onDelete={() => deleteTask(item.id)}
+                        onProgress={(p) => updateProgress(item.id, p)}
+                      />
+                    )
                   ))}
                 </div>
               )}
@@ -1640,7 +1676,8 @@ function PlanningPostSummary({ stats, onView }) {
 }
 
 function MiniCalendar({ tasks, onEditTask }) {
-  const [selectedDay, setSelectedDay] = useState(null);
+  // range: { start: Date, end: Date | null }  (end=null during mid-selection)
+  const [range, setRange] = useState(null);
   const [month, setMonth] = useState(new Date());
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -1648,17 +1685,16 @@ function MiniCalendar({ tasks, onEditTask }) {
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
   const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
   const daysInMonth = lastDay.getDate();
-  const startWeekDay = firstDay.getDay(); // 0 = Sunday
+  const startWeekDay = firstDay.getDay();
 
   const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-  // Build cell array
   const cells = [];
   for (let i = 0; i < startWeekDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Days that have task deadlines
+  // Days with task deadlines (to show dot)
   const deadlineDays = new Set();
   tasks.forEach(t => {
     if (!t.deadline) return;
@@ -1670,9 +1706,50 @@ function MiniCalendar({ tasks, onEditTask }) {
 
   const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
 
+  const handleDayClick = (cellDate) => {
+    if (!range || (range.start && range.end)) {
+      // Start new range
+      setRange({ start: cellDate, end: null });
+    } else if (range.start && !range.end) {
+      // Complete the range
+      if (cellDate.getTime() === range.start.getTime()) {
+        // Clicked same day twice = single-day selection (close it)
+        setRange({ start: range.start, end: range.start });
+      } else if (cellDate < range.start) {
+        setRange({ start: cellDate, end: range.start });
+      } else {
+        setRange({ start: range.start, end: cellDate });
+      }
+    }
+  };
+
+  const isInRange = (cellDate) => {
+    if (!range || !range.start) return false;
+    const end = range.end || range.start;
+    return cellDate >= range.start && cellDate <= end;
+  };
+  const isRangeStart = (cellDate) => range?.start && cellDate.getTime() === range.start.getTime();
+  const isRangeEnd   = (cellDate) => range?.end   && cellDate.getTime() === range.end.getTime();
+
+  // Tasks that fall within the selected range
+  const rangeTasks = range && range.start ? tasks.filter(t => {
+    if (!t.deadline) return false;
+    const td = new Date(t.deadline);
+    td.setHours(0,0,0,0);
+    const end = range.end || range.start;
+    return td >= range.start && td <= end;
+  }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline)) : [];
+
+  const fmt = (d) => new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(d);
+  const rangeLabel = range?.start ? (
+    range.end && range.end.getTime() !== range.start.getTime()
+      ? `${fmt(range.start)} — ${fmt(range.end)}`
+      : fmt(range.start)
+  ) : '';
+
   return (
     <div className="rounded-2xl p-5" style={{ backgroundColor: T.cardBg, border: `1px solid ${T.border}` }}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div className="text-base font-bold" style={{ color: T.text }}>{monthLabel}</div>
         <div className="flex items-center gap-1">
           <button
@@ -1686,6 +1763,22 @@ function MiniCalendar({ tasks, onEditTask }) {
         </div>
       </div>
 
+      {/* Instruction / range status */}
+      <div className="flex items-center justify-between mb-3 min-h-[18px]">
+        <div className="text-[10px]" style={{ color: T.textMuted }}>
+          {!range ? 'คลิกเลือกวัน หรือเลือกเป็นช่วงวัน' :
+           range && !range.end ? 'คลิกวันที่สอง (หรือวันเดิมถ้าเลือกวันเดียว)' :
+           rangeLabel}
+        </div>
+        {range && (
+          <button
+            onClick={() => setRange(null)}
+            className="text-[10px] hover:underline"
+            style={{ color: T.navy, fontWeight: 600 }}
+          >ล้าง</button>
+        )}
+      </div>
+
       <div className="grid grid-cols-7 gap-1 mb-2">
         {dayLabels.map((d, i) => (
           <div key={i} className="text-center text-[10px] font-bold uppercase" style={{ color: T.textMuted }}>{d}</div>
@@ -1697,54 +1790,71 @@ function MiniCalendar({ tasks, onEditTask }) {
           const cellDate = new Date(month.getFullYear(), month.getMonth(), d);
           const isToday = cellDate.getTime() === today.getTime();
           const hasDeadline = deadlineDays.has(d);
-          const dayTasks = tasks.filter(t => {
-            if (!t.deadline) return false;
-            const td = new Date(t.deadline);
-            return td.getDate() === d && td.getMonth() === month.getMonth() && td.getFullYear() === month.getFullYear();
-          });
-          const clickable = dayTasks.length > 0;
+          const inRange = isInRange(cellDate);
+          const rStart = isRangeStart(cellDate);
+          const rEnd = isRangeEnd(cellDate);
+          const isEdge = rStart || rEnd;
+
+          let bg = 'transparent';
+          let fg = T.text;
+          if (isEdge) { bg = T.navy; fg = 'white'; }
+          else if (inRange) { bg = T.navy + '20'; fg = T.text; }
+          else if (isToday) { bg = T.pillBlue + '60'; fg = T.text; }
+
           return (
             <button
               key={i}
-              onClick={() => clickable && setSelectedDay({ date: cellDate, tasks: dayTasks })}
-              disabled={!clickable}
-              className="aspect-square flex items-center justify-center text-xs font-medium rounded-lg relative transition"
+              onClick={() => handleDayClick(cellDate)}
+              className="aspect-square flex items-center justify-center text-xs font-medium rounded-lg relative transition hover:opacity-80"
               style={{
-                backgroundColor: isToday ? T.navy : (clickable ? T.pillBlue + '40' : 'transparent'),
-                color: isToday ? 'white' : T.text,
-                fontWeight: isToday ? 700 : 500,
-                cursor: clickable ? 'pointer' : 'default',
+                backgroundColor: bg,
+                color: fg,
+                fontWeight: (isEdge || isToday) ? 700 : 500,
               }}
             >
               {d}
-              {hasDeadline && !isToday && (
-                <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ backgroundColor: T.cyan }} />
+              {hasDeadline && !isEdge && (
+                <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ backgroundColor: inRange ? T.navy : T.cyan }} />
               )}
             </button>
           );
         })}
       </div>
 
-      {selectedDay && (
+      {/* Selected range tasks */}
+      {range && range.end && (
         <div className="mt-4 pt-4 border-t" style={{ borderColor: T.border }}>
           <div className="flex items-baseline justify-between mb-2">
             <div className="text-xs font-bold" style={{ color: T.text }}>
-              {new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(selectedDay.date)}
+              {rangeTasks.length > 0 ? `${rangeTasks.length} งาน` : 'ไม่มีงานในช่วงนี้'}
             </div>
-            <button onClick={() => setSelectedDay(null)} className="text-[10px]" style={{ color: T.textMuted }}>×</button>
           </div>
-          <div className="space-y-1.5">
-            {selectedDay.tasks.map(t => {
+          <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            {rangeTasks.map(t => {
               const catColor = getCategoryColor(t.category);
               return (
                 <button
                   key={t.id}
-                  onClick={() => { onEditTask && onEditTask(t); setSelectedDay(null); }}
+                  onClick={() => onEditTask && onEditTask(t)}
                   className="w-full text-left rounded-lg px-2 py-1.5 hover:shadow-sm transition"
                   style={{ backgroundColor: catColor + '12', borderLeft: `3px solid ${catColor}` }}
                 >
-                  <div className="text-[11px] font-semibold line-clamp-1" style={{ color: T.text }}>{t.title}</div>
-                  <div className="text-[10px]" style={{ color: catColor }}>{t.category}</div>
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <div className="text-[11px] font-semibold line-clamp-1 flex-1" style={{ color: T.text }}>{t.title}</div>
+                    <div className="text-[9px] flex-shrink-0" style={{ color: T.textMuted }}>
+                      {new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(new Date(t.deadline))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-semibold" style={{ color: catColor }}>{t.category}</span>
+                    {t.person && (
+                      <>
+                        <span className="text-[9px]" style={{ color: T.textMuted }}>·</span>
+                        <Avatar name={t.person} color={getPersonColor(t.person)} size={12} />
+                        <span className="text-[9px]" style={{ color: T.textMuted }}>{t.person}</span>
+                      </>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -1965,6 +2075,94 @@ function TaskCard({ task, onEdit, onDelete, onProgress }) {
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
             <CalIcon size={11} style={{ color: T.textMuted }} />
             <span style={{ color: days < 0 ? '#BE123C' : days <= 3 ? '#B45309' : T.textMuted, fontWeight: 600 }}>{rel}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Empty State
+============================================================ */
+function PostCard({ post, onEdit, onDelete }) {
+  const ch = getChannelMeta(post.channel);
+  const st = getPostStatusMeta(post.status);
+  const fmt = getFormatMeta(post.format);
+  const StatusIcon = st.icon;
+  const preview = (post.copy && post.copy.trim()) || post.topicType || '(ไม่มีหัวข้อ)';
+  const days = post.date ? daysFromToday(post.date) : null;
+  const rel = post.date ? relativeDeadline(post.date) : '';
+
+  return (
+    <div
+      className="rounded-2xl p-4 group hover:shadow-md transition flex flex-col"
+      style={{ backgroundColor: T.cardBg, border: `1px solid ${T.border}`, borderLeft: `4px solid ${ch.color}` }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded" style={{ color: T.navy, backgroundColor: T.pillBlue }}>
+            Planning Post
+          </span>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-md" style={{ color: ch.color, backgroundColor: ch.bg }}>
+            {post.channel}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: st.color, backgroundColor: st.bg }}>
+            <StatusIcon size={10} /> {post.status}
+          </span>
+        </div>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+          <button onClick={onEdit} className="p-1.5 rounded-md hover:bg-black/5"><Edit3 size={13} style={{ color: T.textMuted }} /></button>
+          <button onClick={onDelete} className="p-1.5 rounded-md hover:bg-rose-50"><Trash2 size={13} style={{ color: '#BE123C' }} /></button>
+        </div>
+      </div>
+
+      <h3 className="text-[15px] font-bold leading-snug mb-1.5 line-clamp-2" style={{ color: T.text }}>{preview}</h3>
+
+      {(post.topicType || post.format) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-3">
+          {post.topicType && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: T.textMuted, backgroundColor: '#F1F5F9' }}>
+              {post.topicType}
+            </span>
+          )}
+          {post.format && fmt && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: fmt.color, backgroundColor: fmt.bg }}>
+              {post.format}
+            </span>
+          )}
+        </div>
+      )}
+
+      {post.link && (
+        <a href={post.link} target="_blank" rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-[11px] mb-3 truncate hover:underline" style={{ color: T.navy }}>
+          🔗 {post.link}
+        </a>
+      )}
+
+      <div className="mt-auto flex items-center justify-between pt-3 border-t" style={{ borderColor: '#F1F5F9' }}>
+        <div className="flex items-center gap-2 min-w-0">
+          {post.person ? (
+            <>
+              <Avatar name={post.person} color={getPersonColor(post.person)} size={24} />
+              <span className="text-xs font-semibold truncate" style={{ color: T.text }}>{post.person}</span>
+            </>
+          ) : (
+            <>
+              <div className="w-6 h-6 rounded-full border-2 border-dashed" style={{ borderColor: T.border }} />
+              <span className="text-xs" style={{ color: T.textMuted }}>ยังไม่ assign</span>
+            </>
+          )}
+        </div>
+        {post.date && (
+          <div className="flex items-center gap-1 text-xs flex-shrink-0">
+            <CalIcon size={11} style={{ color: T.textMuted }} />
+            <span style={{ color: days < 0 ? T.textMuted : days <= 3 ? '#B45309' : T.textMuted, fontWeight: 600 }}>
+              {new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(new Date(post.date))}
+              {post.time && ` · ${post.time}`}
+            </span>
           </div>
         )}
       </div>
