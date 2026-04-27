@@ -1070,6 +1070,7 @@ function App() {
             <WorkHistory
               tasks={historyTasks}
               onEdit={(t) => { setEditing(t); setShowModal(true); }}
+              onDelete={deleteTask}
               currentProject={projects.find(p => p.id === currentProjectId)}
             />
           ) : view === 'dashboard' ? (
@@ -2716,7 +2717,7 @@ function Field({ label, required, children }) {
 /* ============================================================
    Work History view
 ============================================================ */
-function WorkHistory({ tasks, onEdit, currentProject }) {
+function WorkHistory({ tasks, onEdit, onDelete, currentProject }) {
   if (tasks.length === 0) {
     return (
       <div className="rounded-2xl border-2 border-dashed py-16 text-center" style={{ borderColor: T.border, backgroundColor: T.cardBg }}>
@@ -2764,7 +2765,14 @@ function WorkHistory({ tasks, onEdit, currentProject }) {
             <div className="text-xs" style={{ color: T.textMuted }}>{groups[bucket].length} task</div>
           </div>
           <div className="space-y-2">
-            {groups[bucket].map(t => <HistoryRow key={t.id} task={t} onEdit={() => onEdit(t)} />)}
+            {groups[bucket].map(t => (
+              <HistoryRow
+                key={t.id}
+                task={t}
+                onEdit={() => onEdit(t)}
+                onDelete={() => onDelete(t.id)}
+              />
+            ))}
           </div>
         </div>
       ))}
@@ -2772,7 +2780,7 @@ function WorkHistory({ tasks, onEdit, currentProject }) {
   );
 }
 
-function HistoryRow({ task, onEdit }) {
+function HistoryRow({ task, onEdit, onDelete }) {
   const status = getStatus(task);
   const meta = STATUS_META[status];
   const StatusIcon = meta.icon;
@@ -2817,6 +2825,14 @@ function HistoryRow({ task, onEdit }) {
           <div>{timeStr} น.</div>
         </div>
       </div>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="p-1.5 rounded-md hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
+        title="ลบ task นี้"
+      >
+        <Trash2 size={14} style={{ color: '#BE123C' }} />
+      </button>
     </div>
   );
 }
