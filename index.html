@@ -260,7 +260,7 @@ const MIGRATIONS = [
     flag: 'content-tracker-v1-mig-clear-old-people-v1',
     run: (tasks) => {
       const oldNames = ['เต้ย', 'แฮรี่', 'พี่หญิง', 'พี่มิว'];
-      return tasks.map(t => oldNames.includes(t.person) ? { ...t, person: '' } : t);
+      return tasks.map(t => oldNames.includes(t.person) ? { ...t, person: '', persons: [] } : t);
     },
   },
   {
@@ -513,6 +513,100 @@ const relativeDeadline = (d) => {
 const newId = () => 'tsk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const formatDateLong = (d) => new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
 
+/* ===== Multi-person helpers (backward compatible) =====
+   Old data: { person: 'Aun' }
+   New data: { person: 'Aun', persons: ['Aun', 'Tata'] }   <- both fields kept
+   getPersons() reads either format and always returns array. */
+const getPersons = (item) => {
+  if (!item) return [];
+  if (Array.isArray(item.persons) && item.persons.length > 0) {
+    return item.persons.filter(Boolean);
+  }
+  if (typeof item.person === 'string' && item.person.trim()) {
+    return [item.person.trim()];
+  }
+  return [];
+};
+const formatPersonsText = (item) => getPersons(item).join(', ');
+const itemMatchesPerson = (item, name) => {
+  if (name === 'all') return true;
+  return getPersons(item).includes(name);
+};
+/* When saving, write both `persons` array AND `person` string (= persons[0] || '')
+   so older deployed HTML still reads old field correctly. */
+const buildPersonFields = (personsArr) => {
+  const arr = (personsArr || []).filter(Boolean);
+  return { persons: arr, person: arr[0] || '' };
+};
+
+/* ===== Local Backup Helpers (Option A) =====
+   Snapshots all Firebase data to browser localStorage on every load + manual save.
+   This is each user's personal backup — different per browser, per device. */
+const BACKUP_KEY = 'la_backup_history_v1';
+const BACKUP_MAX = 15;  // keep last 15 snapshots
+
+function saveLocalBackup(stateData, tag) {
+  try {
+    const existing = (() => {
+      try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); }
+      catch { return []; }
+    })();
+    const snapshot = {
+      id: 'bak_' + Date.now().toString(36),
+      timestamp: Date.now(),
+      date: new Date().toISOString(),
+      tag: tag || 'auto',
+      counts: {
+        tasks: (stateData['content-tracker-v1'] || []).length,
+        posts: (stateData['planning-posts-v1'] || []).length,
+        jobs: (stateData['pr-jobs-v1'] || []).length,
+        team: (stateData['team-members-v1'] || []).length,
+      },
+      data: stateData,
+    };
+    // Don't save if last snapshot has same counts AND was within 60s (avoid spam)
+    const last = existing[0];
+    if (last && tag === 'auto' &&
+        Date.now() - last.timestamp < 60000 &&
+        last.counts.tasks === snapshot.counts.tasks &&
+        last.counts.posts === snapshot.counts.posts &&
+        last.counts.jobs === snapshot.counts.jobs) {
+      return null;
+    }
+    const newHistory = [snapshot, ...existing].slice(0, BACKUP_MAX);
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(newHistory));
+    return snapshot;
+  } catch (e) {
+    console.warn('Local backup failed:', e.message);
+    return null;
+  }
+}
+
+function getLocalBackups() {
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function deleteLocalBackup(id) {
+  try {
+    const list = getLocalBackups().filter(b => b.id !== id);
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+function downloadBackupAsJson(snapshot) {
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date(snapshot.timestamp).toISOString().slice(0, 19).replace(/:/g, '-');
+  a.href = url;
+  a.download = `love_andaman_backup_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 /* ===== CSV Export Helper ===== */
 const escapeCsv = (val) => {
   if (val === null || val === undefined) return '';
@@ -589,6 +683,8 @@ function App() {
   const [editingJob, setEditingJob] = useState(null);
   const [jobFilterCategory, setJobFilterCategory] = useState('all');
   const [jobFilterStatus, setJobFilterStatus] = useState('all');
+  /* Backup modal */
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [view, setView] = useState('dashboard');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -717,9 +813,27 @@ function App() {
     setTasks(merged);
 
     // Load PR Jobs
+    let loadedJobs = [];
     try {
       const r = await window.storage.get(JOBS_KEY, true);
-      if (r?.value) setJobs(JSON.parse(r.value));
+      if (r?.value) {
+        loadedJobs = JSON.parse(r.value);
+        setJobs(loadedJobs);
+      }
+    } catch (e) {}
+
+    // Auto-backup snapshot to localStorage (Option A)
+    try {
+      saveLocalBackup({
+        [STORAGE_KEY]: merged,
+        [POSTS_KEY]: mergedPosts,
+        [JOBS_KEY]: loadedJobs,
+        [TEAM_KEY]: (await window.storage.get(TEAM_KEY, true).catch(() => null))?.value
+          ? JSON.parse((await window.storage.get(TEAM_KEY, true)).value)
+          : [],
+        [PROJECTS_KEY]: loadedProjects,
+        [CURRENT_PROJECT_KEY]: loadedCurrent,
+      }, 'auto');
     } catch (e) {}
 
     setError(null);
@@ -847,6 +961,68 @@ function App() {
     await persistJobs(next);
   };
 
+  /* Restore from local backup (Option A) */
+  const restoreFromBackup = async (snapshot, scope) => {
+    // scope = 'all' | 'posts' | 'tasks' | 'jobs' | 'team'
+    const data = snapshot.data || {};
+    setSyncing(true);
+    try {
+      // Save a "before-restore" backup so we can undo
+      saveLocalBackup({
+        [STORAGE_KEY]: tasks,
+        [POSTS_KEY]: posts,
+        [JOBS_KEY]: jobs,
+        [TEAM_KEY]: teamMembers,
+        [PROJECTS_KEY]: projects,
+        [CURRENT_PROJECT_KEY]: currentProjectId,
+      }, 'before-restore');
+
+      const restorePosts  = scope === 'all' || scope === 'posts';
+      const restoreTasks  = scope === 'all' || scope === 'tasks';
+      const restoreJobs   = scope === 'all' || scope === 'jobs';
+      const restoreTeam   = scope === 'all' || scope === 'team';
+
+      if (restoreTasks && data[STORAGE_KEY]) {
+        await window.storage.set(STORAGE_KEY, JSON.stringify(data[STORAGE_KEY]), true);
+        setTasks(data[STORAGE_KEY]);
+      }
+      if (restorePosts && data[POSTS_KEY]) {
+        await window.storage.set(POSTS_KEY, JSON.stringify(data[POSTS_KEY]), true);
+        setPosts(data[POSTS_KEY]);
+      }
+      if (restoreJobs && data[JOBS_KEY]) {
+        await window.storage.set(JOBS_KEY, JSON.stringify(data[JOBS_KEY]), true);
+        setJobs(data[JOBS_KEY]);
+      }
+      if (restoreTeam && data[TEAM_KEY]) {
+        await window.storage.set(TEAM_KEY, JSON.stringify(data[TEAM_KEY]), true);
+        setTeamMembers(data[TEAM_KEY]);
+        CURRENT_TEAM = data[TEAM_KEY];
+      }
+      setError(null);
+      setShowBackupModal(false);
+      alert('✅ กู้คืนข้อมูลสำเร็จ — โหลดหน้าใหม่อาจเห็นชัดขึ้น');
+    } catch (e) {
+      setError('กู้คืนไม่สำเร็จ: ' + e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  /* Save a manual backup snapshot of current state */
+  const saveManualBackup = () => {
+    const snap = saveLocalBackup({
+      [STORAGE_KEY]: tasks,
+      [POSTS_KEY]: posts,
+      [JOBS_KEY]: jobs,
+      [TEAM_KEY]: teamMembers,
+      [PROJECTS_KEY]: projects,
+      [CURRENT_PROJECT_KEY]: currentProjectId,
+    }, 'manual');
+    if (snap) alert('✅ บันทึกสำเร็จ — เก็บไว้ใน browser ของคุณ');
+    else alert('⚠️ บันทึกไม่สำเร็จ (browser อาจปิด localStorage)');
+  };
+
   const saveTask = async (task) => {
     let next;
     if (task.id && tasks.find(t => t.id === task.id)) {
@@ -960,10 +1136,10 @@ function App() {
     let arr = projectJobs.filter(j => {
       if (jobFilterCategory !== 'all' && j.category !== jobFilterCategory) return false;
       if (jobFilterStatus !== 'all' && getStatus(j) !== jobFilterStatus) return false;
-      if (filterPerson !== 'all' && j.person !== filterPerson) return false;
+      if (!itemMatchesPerson(j, filterPerson)) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (!`${j.title} ${j.person || ''} ${j.notes || ''} ${j.category || ''}`.toLowerCase().includes(q)) return false;
+        if (!`${j.title} ${formatPersonsText(j)} ${j.notes || ''} ${j.category || ''}`.toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -995,7 +1171,7 @@ function App() {
   const memberWorkingPct = useMemo(() => {
     if (teamMembers.length === 0) return 0;
     const activeMembers = teamMembers.filter(m =>
-      projectTasks.some(t => t.person === m.name && getStatus(t) !== 'done')
+      projectTasks.some(t => getPersons(t).includes(m.name) && getStatus(t) !== 'done')
     ).length;
     return Math.round((activeMembers / teamMembers.length) * 100);
   }, [projectTasks, teamMembers]);
@@ -1005,10 +1181,10 @@ function App() {
     const taskItems = projectTasks.filter(t => {
       if (filterStatus !== 'all' && getStatus(t) !== filterStatus) return false;
       if (filterCategory !== 'all' && t.category !== filterCategory) return false;
-      if (filterPerson !== 'all' && t.person !== filterPerson) return false;
+      if (!itemMatchesPerson(t, filterPerson)) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (!`${t.title} ${t.person} ${t.notes || ''}`.toLowerCase().includes(q)) return false;
+        if (!`${t.title} ${formatPersonsText(t)} ${t.notes || ''}`.toLowerCase().includes(q)) return false;
       }
       return true;
     }).map(t => ({ ...t, __itemType: 'task' }));
@@ -1022,7 +1198,7 @@ function App() {
     const postItems = projectPosts.filter(p => {
       // Hide posts if a specific category is selected (posts don't have categories)
       if (filterCategory !== 'all') return false;
-      if (filterPerson !== 'all' && p.person !== filterPerson) return false;
+      if (!itemMatchesPerson(p, filterPerson)) return false;
       // Map task status filter to post status roughly
       if (filterStatus !== 'all') {
         const map = { inProgress: 'In Progress', done: 'Published', notStarted: 'Planned' };
@@ -1031,7 +1207,7 @@ function App() {
       }
       if (search) {
         const q = search.toLowerCase();
-        const haystack = `${p.copy || ''} ${p.topicType || ''} ${p.person || ''} ${p.channel || ''}`.toLowerCase();
+        const haystack = `${p.copy || ''} ${p.topicType || ''} ${formatPersonsText(p)} ${p.channel || ''}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -1075,6 +1251,7 @@ function App() {
         onDeleteProject={deleteProject}
         teamMembers={teamMembers}
         onManageTeam={() => setShowTeamModal(true)}
+        onOpenBackup={() => setShowBackupModal(true)}
       />
 
       {/* Center column */}
@@ -1174,7 +1351,7 @@ function App() {
                     { label: 'ชื่อ', value: (r) => r.__itemType === 'post' ? (r.copy || r.topicType || '-') : r.title },
                     { label: 'หมวด/Channel', value: (r) => r.__itemType === 'post' ? r.channel : r.category },
                     { label: 'สถานะ', value: (r) => r.__itemType === 'post' ? r.status : (STATUS_META[getStatus(r)]?.label || '-') },
-                    { label: 'ผู้รับผิดชอบ', value: 'person' },
+                    { label: 'ผู้รับผิดชอบ', value: (r) => formatPersonsText(r) },
                     { label: 'วันที่/Deadline', value: (r) => r.__itemType === 'post' ? r.date : r.deadline },
                     { label: 'เวลา', value: (r) => r.__itemType === 'post' ? (r.time || '') : '' },
                     { label: 'Progress', value: (r) => r.__itemType === 'post' ? '' : (r.progress ?? 0) },
@@ -1260,6 +1437,20 @@ function App() {
           teamMembers={teamMembers}
         />
       )}
+
+      {showBackupModal && (
+        <BackupModal
+          onClose={() => setShowBackupModal(false)}
+          onRestore={restoreFromBackup}
+          onSaveNow={saveManualBackup}
+          currentCounts={{
+            tasks: tasks.length,
+            posts: posts.length,
+            jobs: jobs.length,
+            team: teamMembers.length,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1267,7 +1458,7 @@ function App() {
 /* ============================================================
    Sidebar  (dark navy — Image 2 style)
 ============================================================ */
-function Sidebar({ view, setView, open, onClose, onAdd, stats, projects, currentProjectId, onSwitchProject, onAddProject, onDeleteProject, teamMembers, onManageTeam }) {
+function Sidebar({ view, setView, open, onClose, onAdd, stats, projects, currentProjectId, onSwitchProject, onAddProject, onDeleteProject, teamMembers, onManageTeam, onOpenBackup }) {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const items = [
     { id: 'dashboard', label: 'Dashboard',     icon: LayoutDashboard },
@@ -1389,7 +1580,7 @@ function Sidebar({ view, setView, open, onClose, onAdd, stats, projects, current
         </div>
 
         {/* Team avatars at bottom - click to manage */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-3">
           <button
             onClick={onManageTeam}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition hover:bg-white/5"
@@ -1411,6 +1602,19 @@ function Sidebar({ view, setView, open, onClose, onAdd, stats, projects, current
               <div className="text-[10px] uppercase tracking-wider" style={{ color: T.sidebarText }}>{teamMembers.length} members · จัดการ</div>
             </div>
             <Edit3 size={14} style={{ color: T.sidebarText }} />
+          </button>
+        </div>
+
+        {/* Backup & Restore button */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={onOpenBackup}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition hover:bg-white/5"
+            style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#86EFAC' }}
+            title="กู้คืนข้อมูลจาก backup ใน browser"
+          >
+            <Download size={14} />
+            <span className="flex-1 text-left">Backup &amp; Restore</span>
           </button>
         </div>
       </aside>
@@ -1735,7 +1939,7 @@ function WorkProgressList({ tasks, onEdit, onSeeAll }) {
               </div>
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span style={{ color: T.textMuted }}>{t.progress}% Complete</span>
-                {t.person && <Avatar name={t.person} color={getPersonColor(t.person)} size={20} />}
+                {getPersons(t).length > 0 && <AvatarStack names={getPersons(t)} size={20} max={3} />}
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#E5E7EB' }}>
                 <div className="h-full rounded-full" style={{ width: `${t.progress}%`, backgroundColor: catColor }} />
@@ -1810,7 +2014,7 @@ function DueSoonSection({ tasks, onEdit }) {
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>{label}</span>
-                {t.person && <Avatar name={t.person} color={getPersonColor(t.person)} size={18} />}
+                {getPersons(t).length > 0 && <AvatarStack names={getPersons(t)} size={18} max={2} />}
               </div>
               <div className="text-sm font-semibold line-clamp-2 mb-1.5" style={{ color: T.text }}>{t.title}</div>
               <div className="flex items-center gap-2">
@@ -2036,11 +2240,11 @@ function MiniCalendar({ tasks, onEditTask }) {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-semibold" style={{ color: catColor }}>{t.category}</span>
-                    {t.person && (
+                    {getPersons(t).length > 0 && (
                       <>
                         <span className="text-[9px]" style={{ color: T.textMuted }}>·</span>
-                        <Avatar name={t.person} color={getPersonColor(t.person)} size={12} />
-                        <span className="text-[9px]" style={{ color: T.textMuted }}>{t.person}</span>
+                        <AvatarStack names={getPersons(t)} size={12} max={2} />
+                        <span className="text-[9px]" style={{ color: T.textMuted }}>{formatPersonsText(t)}</span>
                       </>
                     )}
                   </div>
@@ -2094,8 +2298,8 @@ function UpcomingList({ items, onEditTask }) {
                     <span className="text-[10px] font-medium" style={{ color: catColor }}>
                       {t.category}
                     </span>
-                    {t.person ? (
-                      <Avatar name={t.person} color={getPersonColor(t.person)} size={16} />
+                    {getPersons(t).length > 0 ? (
+                      <AvatarStack names={getPersons(t)} size={16} max={3} />
                     ) : (
                       <span className="text-[10px]" style={{ color: T.textMuted }}>unassigned</span>
                     )}
@@ -2126,6 +2330,57 @@ function Avatar({ name, color, size = 32, ring }) {
     >
       {getInitials(name)}
     </div>
+  );
+}
+
+/* Stacked avatars for multi-person display */
+function AvatarStack({ names, size = 24, max = 3 }) {
+  if (!names || names.length === 0) return null;
+  const visible = names.slice(0, max);
+  const overflow = names.length - max;
+  return (
+    <div className="flex -space-x-1.5 items-center">
+      {visible.map((n, i) => (
+        <Avatar key={n + i} name={n} color={getPersonColor(n)} size={size} ring="white" />
+      ))}
+      {overflow > 0 && (
+        <div
+          className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+          style={{
+            width: size, height: size,
+            backgroundColor: '#64748B',
+            fontSize: size * 0.36,
+            boxShadow: '0 0 0 2px white',
+          }}
+          title={names.slice(max).join(', ')}
+        >
+          +{overflow}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Display assigned persons (avatars + names) with empty state */
+function PersonsDisplay({ item, size = 24, showText = true, maxAvatars = 3 }) {
+  const persons = getPersons(item);
+  if (persons.length === 0) {
+    return (
+      <>
+        <div className="rounded-full border-2 border-dashed flex-shrink-0" style={{ width: size, height: size, borderColor: T.border }} />
+        {showText && <span className="text-xs" style={{ color: T.textMuted }}>ยังไม่ assign</span>}
+      </>
+    );
+  }
+  return (
+    <>
+      <AvatarStack names={persons} size={size} max={maxAvatars} />
+      {showText && (
+        <span className="text-xs font-semibold truncate" style={{ color: T.text }}>
+          {persons.length === 1 ? persons[0] : `${persons[0]} +${persons.length - 1}`}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -2248,17 +2503,7 @@ function TaskCard({ task, onEdit, onDelete, onProgress }) {
 
       <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: '#F1F5F9' }}>
         <div className="flex items-center gap-2 min-w-0">
-          {task.person ? (
-            <>
-              <Avatar name={task.person} color={getPersonColor(task.person)} size={24} />
-              <span className="text-xs font-semibold truncate" style={{ color: T.text }}>{task.person}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-6 h-6 rounded-full border-2 border-dashed" style={{ borderColor: T.border }} />
-              <span className="text-xs" style={{ color: T.textMuted }}>ยังไม่ assign</span>
-            </>
-          )}
+          <PersonsDisplay item={task} size={24} />
         </div>
         {task.deadline && (
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
@@ -2333,17 +2578,7 @@ function PostCard({ post, onEdit, onDelete }) {
 
       <div className="mt-auto flex items-center justify-between pt-3 border-t" style={{ borderColor: '#F1F5F9' }}>
         <div className="flex items-center gap-2 min-w-0">
-          {post.person ? (
-            <>
-              <Avatar name={post.person} color={getPersonColor(post.person)} size={24} />
-              <span className="text-xs font-semibold truncate" style={{ color: T.text }}>{post.person}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-6 h-6 rounded-full border-2 border-dashed" style={{ borderColor: T.border }} />
-              <span className="text-xs" style={{ color: T.textMuted }}>ยังไม่ assign</span>
-            </>
-          )}
+          <PersonsDisplay item={post} size={24} />
         </div>
         {post.date && (
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
@@ -2388,7 +2623,7 @@ function PRJobs({ jobs, totalCount, onAdd, onEdit, onDelete, onProgress, filterC
               { label: 'หมวดหมู่', value: 'category' },
               { label: 'ชื่อ Job', value: 'title' },
               { label: 'สถานะ', value: (r) => STATUS_META[getStatus(r)]?.label || '-' },
-              { label: 'ผู้รับผิดชอบ', value: 'person' },
+              { label: 'ผู้รับผิดชอบ', value: (r) => formatPersonsText(r) },
               { label: 'กำหนดส่ง', value: 'deadline' },
               { label: 'Progress', value: (r) => r.progress ?? 0 },
               { label: 'หมายเหตุ', value: 'notes' },
@@ -2536,17 +2771,7 @@ function JobCard({ job, onEdit, onDelete, onProgress }) {
 
       <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: '#F1F5F9' }}>
         <div className="flex items-center gap-2 min-w-0">
-          {job.person ? (
-            <>
-              <Avatar name={job.person} color={getPersonColor(job.person)} size={24} />
-              <span className="text-xs font-semibold truncate" style={{ color: T.text }}>{job.person}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-6 h-6 rounded-full border-2 border-dashed" style={{ borderColor: T.border }} />
-              <span className="text-xs" style={{ color: T.textMuted }}>ยังไม่ assign</span>
-            </>
-          )}
+          <PersonsDisplay item={job} size={24} />
         </div>
         {job.deadline && (
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
@@ -2561,18 +2786,23 @@ function JobCard({ job, onEdit, onDelete, onProgress }) {
 
 function JobModal({ job, onSave, onClose, teamMembers }) {
   const [title, setTitle] = useState(job?.title || '');
-  const [person, setPerson] = useState(job?.person || '');
+  const [persons, setPersonsState] = useState(getPersons(job));
   const [category, setCategory] = useState(job?.category || JOB_CATEGORIES[0].name);
   const [deadline, setDeadline] = useState(job?.deadline || '');
   const [progress, setProgress] = useState(job?.progress ?? 0);
   const [notes, setNotes] = useState(job?.notes || '');
 
+  const togglePerson = (name) => {
+    setPersonsState(prev => prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name]);
+  };
+
   const handleSave = () => {
     if (!title.trim()) { alert('กรอกชื่อ Job ก่อนนะ'); return; }
     onSave({
       ...(job || {}),
-      title: title.trim(), person: person.trim(), category, deadline,
+      title: title.trim(), category, deadline,
       progress: parseInt(progress) || 0, notes: notes.trim(),
+      ...buildPersonFields(persons),
     });
   };
 
@@ -2596,13 +2826,13 @@ function JobModal({ job, onSave, onClose, teamMembers }) {
               style={{ borderColor: T.border, backgroundColor: 'white' }} />
           </Field>
 
-          <Field label="ผู้รับผิดชอบ">
+          <Field label={`ผู้รับผิดชอบ ${persons.length > 0 ? `(${persons.length} คน)` : '— กดเลือกได้หลายคน'}`}>
             <div className="flex gap-1.5 flex-wrap">
               {(teamMembers || DEFAULT_TEAM_MEMBERS).map(m => {
-                const active = person === m.name;
+                const active = persons.includes(m.name);
                 return (
                   <button key={m.name}
-                    onClick={() => setPerson(active ? '' : m.name)}
+                    onClick={() => togglePerson(m.name)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition"
                     style={{
                       backgroundColor: active ? m.color : 'white',
@@ -2610,6 +2840,7 @@ function JobModal({ job, onSave, onClose, teamMembers }) {
                     }}>
                     <Avatar name={m.name} color={active ? 'rgba(255,255,255,0.25)' : m.color} size={20} />
                     <span className="text-xs font-semibold" style={{ color: active ? 'white' : T.text }}>{m.name}</span>
+                    {active && <CheckCircle2 size={12} style={{ color: 'white' }} />}
                   </button>
                 );
               })}
@@ -2672,6 +2903,273 @@ function JobModal({ job, onSave, onClose, teamMembers }) {
 
 
 /* ============================================================
+   Backup & Restore Modal (Option A)
+============================================================ */
+function BackupModal({ onClose, onRestore, onSaveNow, currentCounts }) {
+  const [backups, setBackups] = useState(getLocalBackups());
+  const [selectedId, setSelectedId] = useState(null);
+  const [scope, setScope] = useState('posts');  // posts | tasks | jobs | team | all
+  const fileInputRef = React.useRef(null);
+  const [importedSnapshot, setImportedSnapshot] = useState(null);
+
+  const refresh = () => setBackups(getLocalBackups());
+
+  const handleSaveNow = () => {
+    onSaveNow();
+    setTimeout(refresh, 100);
+  };
+
+  const handleDelete = (id) => {
+    if (!confirm('ลบ backup นี้?')) return;
+    deleteLocalBackup(id);
+    refresh();
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  const handleDownload = (snap) => downloadBackupAsJson(snap);
+
+  const handleFileImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.data) throw new Error('ไฟล์ไม่ใช่ backup ที่ถูกต้อง');
+        setImportedSnapshot(parsed);
+        // also add to history
+        try {
+          const existing = getLocalBackups();
+          const next = [{ ...parsed, id: 'bak_imp_' + Date.now().toString(36), tag: 'imported' }, ...existing].slice(0, BACKUP_MAX);
+          localStorage.setItem(BACKUP_KEY, JSON.stringify(next));
+          refresh();
+        } catch (e) {}
+        alert('✅ โหลดไฟล์ backup สำเร็จ — เลือกในรายการเพื่อกู้คืน');
+      } catch (err) {
+        alert('❌ อ่านไฟล์ไม่ได้: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const selected = backups.find(b => b.id === selectedId);
+
+  const scopeLabel = {
+    all:   'ทั้งหมด (Tasks + Posts + Jobs + Team)',
+    posts: 'Planning Posts เท่านั้น',
+    tasks: 'Tasks เท่านั้น',
+    jobs:  'PR Jobs เท่านั้น',
+    team:  'Team Members เท่านั้น',
+  };
+
+  const handleRestore = () => {
+    if (!selected) return;
+    const targetCount = scope === 'posts' ? selected.counts.posts
+      : scope === 'tasks' ? selected.counts.tasks
+      : scope === 'jobs'  ? selected.counts.jobs
+      : scope === 'team'  ? selected.counts.team
+      : (selected.counts.posts + selected.counts.tasks + selected.counts.jobs);
+    const currentCount = scope === 'posts' ? currentCounts.posts
+      : scope === 'tasks' ? currentCounts.tasks
+      : scope === 'jobs'  ? currentCounts.jobs
+      : scope === 'team'  ? currentCounts.team
+      : (currentCounts.posts + currentCounts.tasks + currentCounts.jobs);
+    const msg = `ยืนยันการกู้คืน?\n\nจะแทน "${scopeLabel[scope]}":\n` +
+                `  ของเดิม ${currentCount} รายการ → backup ${targetCount} รายการ\n\n` +
+                `ระบบจะสร้าง backup ของ "ของเดิม" ก่อน เพื่อให้ undo ได้\n` +
+                `Backup จาก: ${new Date(selected.timestamp).toLocaleString('th-TH')}`;
+    if (!confirm(msg)) return;
+    onRestore(selected, scope);
+  };
+
+  const fmt = (ts) => new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }).format(new Date(ts));
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(11, 18, 32, 0.6)' }} onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden" style={{ backgroundColor: T.cardBg }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: T.border }}>
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: T.text }}>
+              <Download size={18} style={{ color: T.navy }} />
+              Backup &amp; Restore
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: T.textMuted }}>
+              ระบบ backup อัตโนมัติทุกครั้งที่โหลดแอพ — เก็บใน browser ของคุณ (เครื่องนี้เท่านั้น)
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-black/5">
+            <X size={18} style={{ color: T.textMuted }} />
+          </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="px-6 py-3 border-b flex items-center gap-2 flex-wrap" style={{ borderColor: T.border, backgroundColor: '#FAFAF7' }}>
+          <button
+            onClick={handleSaveNow}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white"
+            style={{ backgroundColor: T.navy }}
+          >
+            <Plus size={14} /> Save Backup ตอนนี้
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white"
+            style={{ borderColor: T.border, color: T.text }}
+          >
+            📂 Import จากไฟล์ JSON
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleFileImport}
+            style={{ display: 'none' }}
+          />
+          <span className="ml-auto text-xs" style={{ color: T.textMuted }}>
+            ปัจจุบัน: {currentCounts.tasks} tasks · {currentCounts.posts} posts · {currentCounts.jobs} jobs
+          </span>
+        </div>
+
+        {/* Backup list + restore options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 max-h-[60vh]">
+          {/* Left: backup list */}
+          <div className="border-r overflow-y-auto" style={{ borderColor: T.border, maxHeight: '60vh' }}>
+            <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider" style={{ color: T.textMuted, backgroundColor: '#F8FAFC' }}>
+              ประวัติ Backup ({backups.length})
+            </div>
+            {backups.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs" style={{ color: T.textMuted }}>
+                ยังไม่มี backup<br/>โหลดแอพหรือกด "Save Backup ตอนนี้"
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: T.border }}>
+                {backups.map(b => {
+                  const active = selectedId === b.id;
+                  const tagLabel = b.tag === 'manual' ? '💾 Manual' : b.tag === 'before-restore' ? '↶ Before Restore' : b.tag === 'imported' ? '📂 Imported' : '🔄 Auto';
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => setSelectedId(b.id)}
+                      className="w-full text-left px-4 py-3 transition hover:bg-slate-50"
+                      style={{ backgroundColor: active ? T.pillBlue : 'transparent' }}
+                    >
+                      <div className="flex items-baseline justify-between gap-2 mb-1">
+                        <div className="text-xs font-bold" style={{ color: T.text }}>{fmt(b.timestamp)}</div>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ color: T.navy, backgroundColor: 'white' }}>
+                          {tagLabel}
+                        </span>
+                      </div>
+                      <div className="text-[10px]" style={{ color: T.textMuted }}>
+                        {b.counts.tasks} tasks · {b.counts.posts} posts · {b.counts.jobs} jobs · {b.counts.team} team
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Right: restore details */}
+          <div className="p-5 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+            {!selected ? (
+              <div className="text-center py-12 text-sm" style={{ color: T.textMuted }}>
+                ← เลือก backup จากรายการ
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs font-semibold mb-1" style={{ color: T.textMuted }}>Backup ที่เลือก</div>
+                  <div className="text-base font-bold" style={{ color: T.text }}>{fmt(selected.timestamp)}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg p-2.5" style={{ backgroundColor: T.pillBlue }}>
+                    <div className="font-semibold" style={{ color: T.navy }}>📝 Tasks</div>
+                    <div className="text-lg font-bold" style={{ color: T.text }}>{selected.counts.tasks}</div>
+                    <div className="text-[10px]" style={{ color: T.textMuted }}>ปัจจุบัน: {currentCounts.tasks}</div>
+                  </div>
+                  <div className="rounded-lg p-2.5" style={{ backgroundColor: '#FCE7F3' }}>
+                    <div className="font-semibold" style={{ color: '#BE185D' }}>📅 Posts</div>
+                    <div className="text-lg font-bold" style={{ color: T.text }}>{selected.counts.posts}</div>
+                    <div className="text-[10px]" style={{ color: T.textMuted }}>ปัจจุบัน: {currentCounts.posts}</div>
+                  </div>
+                  <div className="rounded-lg p-2.5" style={{ backgroundColor: '#FED7AA' }}>
+                    <div className="font-semibold" style={{ color: '#C2410C' }}>📢 Jobs</div>
+                    <div className="text-lg font-bold" style={{ color: T.text }}>{selected.counts.jobs}</div>
+                    <div className="text-[10px]" style={{ color: T.textMuted }}>ปัจจุบัน: {currentCounts.jobs}</div>
+                  </div>
+                  <div className="rounded-lg p-2.5" style={{ backgroundColor: '#D1FAE5' }}>
+                    <div className="font-semibold" style={{ color: '#047857' }}>👥 Team</div>
+                    <div className="text-lg font-bold" style={{ color: T.text }}>{selected.counts.team}</div>
+                    <div className="text-[10px]" style={{ color: T.textMuted }}>ปัจจุบัน: {currentCounts.team}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold mb-2" style={{ color: T.text }}>กู้คืนเฉพาะ:</div>
+                  <div className="space-y-1.5">
+                    {Object.entries(scopeLabel).map(([k, l]) => (
+                      <label key={k} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="radio"
+                          name="scope"
+                          checked={scope === k}
+                          onChange={() => setScope(k)}
+                        />
+                        <span style={{ color: T.text }}>{l}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={handleRestore}
+                    className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg text-white"
+                    style={{ backgroundColor: '#047857' }}
+                  >
+                    ↶ กู้คืน Backup นี้
+                  </button>
+                  <button
+                    onClick={() => handleDownload(selected)}
+                    className="px-3 py-2.5 text-xs font-semibold rounded-lg border bg-white"
+                    style={{ borderColor: T.border, color: T.text }}
+                    title="ดาวน์โหลด JSON เก็บไว้"
+                  >
+                    <Download size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(selected.id)}
+                    className="px-3 py-2.5 text-xs font-semibold rounded-lg hover:bg-rose-50"
+                    style={{ color: '#BE123C' }}
+                    title="ลบ backup นี้"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+
+                <div className="text-[10px] p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  ⚠️ การกู้คืนจะ <strong>เขียนทับ</strong> ข้อมูลปัจจุบันของทุกคน (sync ขึ้น Cloud) — แต่ระบบจะสร้าง backup ของ "ของเดิม" ก่อน เพื่อให้ undo ได้
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ backgroundColor: '#FAFAF7', borderColor: T.border }}>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-lg hover:bg-black/5" style={{ color: T.textMuted }}>ปิด</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ============================================================
    Empty State
 ============================================================ */
 function EmptyState({ onAdd, hasTasks }) {
@@ -2700,18 +3198,23 @@ function EmptyState({ onAdd, hasTasks }) {
 ============================================================ */
 function TaskModal({ task, onSave, onClose, teamMembers }) {
   const [title, setTitle] = useState(task?.title || '');
-  const [person, setPerson] = useState(task?.person || '');
+  const [persons, setPersonsState] = useState(getPersons(task));
   const [category, setCategory] = useState(task?.category || CATEGORIES[0].name);
   const [deadline, setDeadline] = useState(task?.deadline || '');
   const [progress, setProgress] = useState(task?.progress ?? 0);
   const [notes, setNotes] = useState(task?.notes || '');
 
+  const togglePerson = (name) => {
+    setPersonsState(prev => prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name]);
+  };
+
   const handleSave = () => {
     if (!title.trim()) { alert('กรอกชื่อ task ก่อนนะ'); return; }
     onSave({
       ...(task || {}),
-      title: title.trim(), person: person.trim(), category, deadline,
+      title: title.trim(), category, deadline,
       progress: parseInt(progress) || 0, notes: notes.trim(),
+      ...buildPersonFields(persons),
     });
   };
 
@@ -2731,13 +3234,13 @@ function TaskModal({ task, onSave, onClose, teamMembers }) {
               className="w-full px-3.5 py-2.5 text-sm rounded-lg border outline-none focus:ring-2"
               style={{ borderColor: T.border, backgroundColor: 'white' }} />
           </Field>
-          <Field label="ผู้รับผิดชอบ">
+          <Field label={`ผู้รับผิดชอบ ${persons.length > 0 ? `(${persons.length} คน)` : '— กดเลือกได้หลายคน'}`}>
             <div className="flex gap-1.5 flex-wrap">
               {(teamMembers || DEFAULT_TEAM_MEMBERS).map(m => {
-                const active = person === m.name;
+                const active = persons.includes(m.name);
                 return (
                   <button key={m.name}
-                    onClick={() => setPerson(active ? '' : m.name)}
+                    onClick={() => togglePerson(m.name)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition"
                     style={{
                       backgroundColor: active ? m.color : 'white',
@@ -2745,6 +3248,7 @@ function TaskModal({ task, onSave, onClose, teamMembers }) {
                     }}>
                     <Avatar name={m.name} color={active ? 'rgba(255,255,255,0.25)' : m.color} size={20} />
                     <span className="text-xs font-semibold" style={{ color: active ? 'white' : T.text }}>{m.name}</span>
+                    {active && <CheckCircle2 size={12} style={{ color: 'white' }} />}
                   </button>
                 );
               })}
@@ -2851,7 +3355,7 @@ function WorkHistory({ tasks, onEdit, onDelete, currentProject }) {
             { label: 'ชื่อ Task', value: 'title' },
             { label: 'หมวดหมู่', value: 'category' },
             { label: 'สถานะ', value: (r) => STATUS_META[getStatus(r)]?.label || '-' },
-            { label: 'ผู้รับผิดชอบ', value: 'person' },
+            { label: 'ผู้รับผิดชอบ', value: (r) => formatPersonsText(r) },
             { label: 'Deadline', value: 'deadline' },
             { label: 'Progress', value: (r) => r.progress ?? 0 },
             { label: 'อัพเดทล่าสุด', value: 'updatedAt' },
@@ -2918,8 +3422,8 @@ function HistoryRow({ task, onEdit, onDelete }) {
           <div className="font-semibold" style={{ color: T.text }}>{task.progress ?? 0}%</div>
           <div style={{ color: T.textMuted }}>progress</div>
         </div>
-        {task.person ? (
-          <Avatar name={task.person} color={getPersonColor(task.person)} size={28} />
+        {getPersons(task).length > 0 ? (
+          <AvatarStack names={getPersons(task)} size={28} max={3} />
         ) : (
           <div className="w-7 h-7 rounded-full border-2 border-dashed" style={{ borderColor: T.border }} />
         )}
@@ -3133,7 +3637,7 @@ function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChanne
               { label: 'Status',   value: 'status' },
               { label: 'Date',     value: 'date' },
               { label: 'Time',     value: 'time' },
-              { label: 'ผู้รับผิดชอบ', value: 'person' },
+              { label: 'ผู้รับผิดชอบ', value: (r) => formatPersonsText(r) },
               { label: 'Topic / Type', value: 'topicType' },
               { label: 'Copy',     value: 'copy' },
               { label: 'Format',   value: 'format' },
@@ -3311,10 +3815,12 @@ function PostRow({ post, onEdit, onDelete }) {
       <td className="px-3 py-2.5 text-xs whitespace-nowrap" style={{ color: T.text }}>{dateFormatted}</td>
       <td className="px-3 py-2.5 text-xs whitespace-nowrap" style={{ color: T.text }}>{post.time || '-'}</td>
       <td className="px-3 py-2.5">
-        {post.person ? (
+        {getPersons(post).length > 0 ? (
           <div className="flex items-center gap-1.5">
-            <Avatar name={post.person} color={getPersonColor(post.person)} size={22} />
-            <span className="text-xs font-semibold" style={{ color: T.text }}>{post.person}</span>
+            <AvatarStack names={getPersons(post)} size={22} max={3} />
+            <span className="text-xs font-semibold" style={{ color: T.text }}>
+              {getPersons(post).length === 1 ? getPersons(post)[0] : `${getPersons(post)[0]} +${getPersons(post).length - 1}`}
+            </span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -3368,11 +3874,15 @@ function PostModal({ post, onSave, onClose, teamMembers }) {
   const [day, setDay] = useState(post?.day || (post?.date ? dayFromDate(post.date) : DAYS[0]));
   const [time, setTime] = useState(post?.time || '');
   const [status, setStatus] = useState(post?.status || POST_STATUSES[2].name);
-  const [person, setPerson] = useState(post?.person || '');
+  const [persons, setPersonsState] = useState(getPersons(post));
   const [topicType, setTopicType] = useState(post?.topicType || POST_TOPICS[0]);
   const [copy, setCopy] = useState(post?.copy || '');
   const [format, setFormat] = useState(post?.format || POST_FORMATS[0].name);
   const [link, setLink] = useState(post?.link || '');
+
+  const togglePerson = (name) => {
+    setPersonsState(prev => prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name]);
+  };
 
   // Auto-update day when date changes
   const handleDateChange = (newDate) => {
@@ -3384,9 +3894,10 @@ function PostModal({ post, onSave, onClose, teamMembers }) {
     if (!copy.trim() && !topicType) { alert('กรอก Copy หรือ Topic ก่อนนะ'); return; }
     onSave({
       ...(post || {}),
-      channel, day, status, date, time, person,
+      channel, day, status, date, time,
       topicType, copy: copy.trim(), format,
       link: link.trim(),
+      ...buildPersonFields(persons),
     });
   };
 
@@ -3462,14 +3973,14 @@ function PostModal({ post, onSave, onClose, teamMembers }) {
             </Field>
           </div>
 
-          {/* Person responsible */}
-          <Field label="ผู้รับผิดชอบ">
+          {/* Person responsible — multi-select */}
+          <Field label={`ผู้รับผิดชอบ ${persons.length > 0 ? `(${persons.length} คน)` : '— กดเลือกได้หลายคน'}`}>
             <div className="flex gap-1.5 flex-wrap">
               {(teamMembers || DEFAULT_TEAM_MEMBERS).map(m => {
-                const active = person === m.name;
+                const active = persons.includes(m.name);
                 return (
                   <button key={m.name}
-                    onClick={() => setPerson(active ? '' : m.name)}
+                    onClick={() => togglePerson(m.name)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition"
                     style={{
                       backgroundColor: active ? m.color : 'white',
@@ -3477,6 +3988,7 @@ function PostModal({ post, onSave, onClose, teamMembers }) {
                     }}>
                     <Avatar name={m.name} color={active ? 'rgba(255,255,255,0.25)' : m.color} size={20} />
                     <span className="text-xs font-semibold" style={{ color: active ? 'white' : T.text }}>{m.name}</span>
+                    {active && <CheckCircle2 size={12} style={{ color: 'white' }} />}
                   </button>
                 );
               })}
