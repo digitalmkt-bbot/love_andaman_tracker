@@ -402,19 +402,12 @@ const POST_FORMATS = [
 ];
 
 /* One-time seed for Planning Posts (18 posts from Facebook schedule) */
-/* Migrations for Planning Posts (for users who already have data) */
+/* Migrations for Planning Posts (for users who already have data)
+   ⚠️ DISABLED: All flags are already set in Firestore for current users.
+   Old migrations are kept here for reference but with empty `run` to prevent
+   accidental data overwrite. New users will still seed via POST_SEED_BATCHES. */
 const POST_MIGRATIONS = [
-  {
-    flag: 'content-tracker-v1-mig-post-persons-v1',
-    run: (posts) => {
-      const team = DEFAULT_TEAM_MEMBERS.map(t => t.name);
-      return posts.map((p, idx) => p.person !== undefined ? p : { ...p, person: team[idx % team.length] });
-    },
-  },
-  {
-    flag: 'content-tracker-v1-mig-post-all-aun-v1',
-    run: (posts) => posts.map(p => ({ ...p, person: 'Aun' })),
-  },
+  // Intentionally empty — protect user-added posts from being overwritten
 ];
 
 const POST_SEED_BATCHES = [
@@ -638,12 +631,16 @@ function App() {
     let mergedPosts = [...existingPosts];
     let postsTouched = false;
     for (const batch of POST_SEED_BATCHES) {
+      // Triple protection: skip seeding if (a) flag exists, OR (b) any post already
+      // has an id that starts with "pst_seed_" (= already seeded before).
+      // This prevents duplicate seeding even if the flag write failed previously.
       let seeded = false;
       try {
         const f = await window.storage.get(batch.flag, true);
         if (f?.value) seeded = true;
       } catch (e) {}
-      if (!seeded) {
+      const hasAnySeedPost = existingPosts.some(p => typeof p.id === 'string' && p.id.startsWith('pst_seed_'));
+      if (!seeded && !hasAnySeedPost) {
         const now = new Date().toISOString();
         const seededPosts = batch.posts.map((p, i) => ({
           ...p,
@@ -654,6 +651,9 @@ function App() {
         }));
         mergedPosts = [...mergedPosts, ...seededPosts];
         postsTouched = true;
+        try { await window.storage.set(batch.flag, '1', true); } catch (e) {}
+      } else if (!seeded && hasAnySeedPost) {
+        // Posts were seeded before but flag is missing — set flag to prevent future re-seeds
         try { await window.storage.set(batch.flag, '1', true); } catch (e) {}
       }
     }
