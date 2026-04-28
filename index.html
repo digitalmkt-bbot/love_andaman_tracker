@@ -158,7 +158,8 @@
     // Firebase-backed storage adapter (shape matches Claude's window.storage)
     window.storage = {
       async get(key, shared) {
-        const snap = await docRef.get();
+        // Force server fetch (no cache) to always get latest data
+        const snap = await docRef.get({ source: 'server' });
         if (!snap.exists) return null;
         const data = snap.data();
         return data[key] !== undefined ? { value: data[key] } : null;
@@ -1098,6 +1099,7 @@ function App() {
               setFilterChannel={setPostFilterChannel}
               filterStatus={postFilterStatus}
               setFilterStatus={setPostFilterStatus}
+              onRefresh={load}
             />
           ) : view === 'pr-jobs' ? (
             <PRJobs
@@ -3103,7 +3105,7 @@ function TeamModal({ members, onSave, onClose }) {
 /* ============================================================
    Planning Post view (social media calendar)
 ============================================================ */
-function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChannel, setFilterChannel, filterStatus, setFilterStatus }) {
+function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChannel, setFilterChannel, filterStatus, setFilterStatus, onRefresh }) {
   return (
     <div className="space-y-5">
       <div className="flex items-end justify-between flex-wrap gap-3">
@@ -3114,6 +3116,15 @@ function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChanne
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border bg-white hover:shadow transition"
+            style={{ borderColor: T.border, color: T.text }}
+            title="ดึงข้อมูลล่าสุดจาก Cloud อีกครั้ง"
+          >
+            <RefreshCw size={14} style={{ color: T.navy }} />
+            <span>Reload</span>
+          </button>
           <ExportButton
             label="Export Posts"
             onClick={() => exportToCSV(posts, [
@@ -3138,6 +3149,26 @@ function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChanne
             เพิ่ม Post
           </button>
         </div>
+      </div>
+
+      {/* Status banner showing what's actually loaded */}
+      <div className="rounded-xl px-4 py-2.5 flex items-center justify-between text-xs"
+        style={{ backgroundColor: T.pillBlue, border: `1px solid ${T.border}` }}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span style={{ color: T.navy }} className="font-semibold">
+            📊 ทั้งหมดในโปรเจกต์: <strong>{totalCount}</strong> รายการ
+          </span>
+          {posts.length !== totalCount && (
+            <span style={{ color: T.text }}>
+              · กำลังแสดง <strong>{posts.length}</strong> รายการ (มี filter)
+            </span>
+          )}
+        </div>
+        {totalCount === 0 && (
+          <span style={{ color: '#BE123C' }} className="font-semibold">
+            ⚠️ ไม่พบข้อมูล — กด Reload เพื่อโหลดจาก Cloud
+          </span>
+        )}
       </div>
 
       {/* Filter bar */}
