@@ -225,6 +225,7 @@ const ExternalLink    = (p) => <Icon {...p} paths={<><path d="M15 3h6v6"/><path 
 const Ban             = (p) => <Icon {...p} paths={<><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></>} />;
 const Megaphone       = (p) => <Icon {...p} paths={<><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></>} />;
 const Briefcase       = (p) => <Icon {...p} paths={<><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>} />;
+const Download        = (p) => <Icon {...p} paths={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
 
 
 const STORAGE_KEY = 'content-tracker-v1';
@@ -517,6 +518,54 @@ const relativeDeadline = (d) => {
 };
 const newId = () => 'tsk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const formatDateLong = (d) => new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+
+/* ===== CSV Export Helper ===== */
+const escapeCsv = (val) => {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+};
+
+const exportToCSV = (rows, columns, filename) => {
+  if (!rows || rows.length === 0) {
+    alert('ไม่มีข้อมูลให้ export');
+    return;
+  }
+  const header = columns.map(c => escapeCsv(c.label)).join(',');
+  const lines = rows.map(r =>
+    columns.map(c => escapeCsv(typeof c.value === 'function' ? c.value(r) : r[c.value])).join(',')
+  );
+  // Add BOM so Excel opens UTF-8 correctly
+  const csv = '\uFEFF' + [header, ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `${filename}_${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/* Reusable Export button component */
+function ExportButton({ onClick, label = 'Export CSV' }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border bg-white hover:shadow transition"
+      style={{ borderColor: T.border, color: T.text }}
+      title={`ดาวน์โหลด ${label} เป็นไฟล์ CSV (เปิดใน Excel ได้)`}
+    >
+      <Download size={14} style={{ color: T.navy }} />
+      <span>{label}</span>
+    </button>
+  );
+}
 
 /* ============================================================
    Root App
@@ -1108,6 +1157,31 @@ function App() {
             </>
           ) : (
             <>
+              {/* Tracking Header */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: T.text }}>Tracking</h2>
+                  <p className="text-xs md:text-sm mt-1" style={{ color: T.textMuted }}>
+                    ติดตาม Tasks + Planning Posts ทั้งหมด · {filtered.length} รายการ
+                  </p>
+                </div>
+                <ExportButton
+                  label="Export Tracking"
+                  onClick={() => exportToCSV(filtered, [
+                    { label: 'ประเภท', value: (r) => r.__itemType === 'post' ? 'Post' : 'Task' },
+                    { label: 'ชื่อ', value: (r) => r.__itemType === 'post' ? (r.copy || r.topicType || '-') : r.title },
+                    { label: 'หมวด/Channel', value: (r) => r.__itemType === 'post' ? r.channel : r.category },
+                    { label: 'สถานะ', value: (r) => r.__itemType === 'post' ? r.status : (STATUS_META[getStatus(r)]?.label || '-') },
+                    { label: 'ผู้รับผิดชอบ', value: 'person' },
+                    { label: 'วันที่/Deadline', value: (r) => r.__itemType === 'post' ? r.date : r.deadline },
+                    { label: 'เวลา', value: (r) => r.__itemType === 'post' ? (r.time || '') : '' },
+                    { label: 'Progress', value: (r) => r.__itemType === 'post' ? '' : (r.progress ?? 0) },
+                    { label: 'หมายเหตุ', value: (r) => r.__itemType === 'post' ? (r.topicType || '') : (r.notes || '') },
+                    { label: 'ลิงก์', value: (r) => r.__itemType === 'post' ? (r.link || '') : '' },
+                  ], 'tracking')}
+                />
+              </div>
+
               <FilterBar
                 filterStatus={filterStatus} setFilterStatus={setFilterStatus}
                 filterCategory={filterCategory} setFilterCategory={setFilterCategory}
@@ -2305,13 +2379,27 @@ function PRJobs({ jobs, totalCount, onAdd, onEdit, onDelete, onProgress, filterC
             งานประชาสัมพันธ์ — PR / Event / Blogger / Social China · ทั้งหมด {totalCount} รายการ
           </p>
         </div>
-        <button
-          onClick={onAdd}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white shadow-sm transition hover:opacity-90"
-          style={{ backgroundColor: T.navy }}
-        >
-          <Plus size={16} /> Add New Jobs
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            label="Export Jobs"
+            onClick={() => exportToCSV(jobs, [
+              { label: 'หมวดหมู่', value: 'category' },
+              { label: 'ชื่อ Job', value: 'title' },
+              { label: 'สถานะ', value: (r) => STATUS_META[getStatus(r)]?.label || '-' },
+              { label: 'ผู้รับผิดชอบ', value: 'person' },
+              { label: 'กำหนดส่ง', value: 'deadline' },
+              { label: 'Progress', value: (r) => r.progress ?? 0 },
+              { label: 'หมายเหตุ', value: 'notes' },
+            ], 'pr_jobs')}
+          />
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white shadow-sm transition hover:opacity-90"
+            style={{ backgroundColor: T.navy }}
+          >
+            <Plus size={16} /> Add New Jobs
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -2755,6 +2843,19 @@ function WorkHistory({ tasks, onEdit, onDelete, currentProject }) {
             ประวัติการทำงานทั้งหมด — โปรเจกต์ "{currentProject?.name || '-'}" · {tasks.length} รายการ
           </p>
         </div>
+        <ExportButton
+          label="Export History"
+          onClick={() => exportToCSV(tasks, [
+            { label: 'ชื่อ Task', value: 'title' },
+            { label: 'หมวดหมู่', value: 'category' },
+            { label: 'สถานะ', value: (r) => STATUS_META[getStatus(r)]?.label || '-' },
+            { label: 'ผู้รับผิดชอบ', value: 'person' },
+            { label: 'Deadline', value: 'deadline' },
+            { label: 'Progress', value: (r) => r.progress ?? 0 },
+            { label: 'อัพเดทล่าสุด', value: 'updatedAt' },
+            { label: 'หมายเหตุ', value: 'notes' },
+          ], 'work_history')}
+        />
       </div>
 
       {order.filter(b => groups[b]).map(bucket => (
@@ -3012,14 +3113,31 @@ function PlanningPost({ posts, totalCount, onAdd, onEdit, onDelete, filterChanne
             ตารางวางแผน Social Media — {totalCount} รายการในโปรเจกต์นี้
           </p>
         </div>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg text-white shadow-sm hover:shadow transition"
-          style={{ backgroundColor: T.navy }}
-        >
-          <Plus size={16} />
-          เพิ่ม Post
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            label="Export Posts"
+            onClick={() => exportToCSV(posts, [
+              { label: 'Channel',  value: 'channel' },
+              { label: 'Day',      value: 'day' },
+              { label: 'Status',   value: 'status' },
+              { label: 'Date',     value: 'date' },
+              { label: 'Time',     value: 'time' },
+              { label: 'ผู้รับผิดชอบ', value: 'person' },
+              { label: 'Topic / Type', value: 'topicType' },
+              { label: 'Copy',     value: 'copy' },
+              { label: 'Format',   value: 'format' },
+              { label: 'Link',     value: 'link' },
+            ], 'planning_posts')}
+          />
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg text-white shadow-sm hover:shadow transition"
+            style={{ backgroundColor: T.navy }}
+          >
+            <Plus size={16} />
+            เพิ่ม Post
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
