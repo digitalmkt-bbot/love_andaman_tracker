@@ -9,11 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="preconnect" href="https://unpkg.com" crossorigin />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- React (JSX pre-compiled at build time, no Babel needed) -->
+  <!-- React + Babel -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
@@ -188,7 +186,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Main application (pre-compiled, cool theme) -->
+  <!-- themed + seeding disabled (stop duplicate writes) -->
   <script>
 "use strict";
 
@@ -196,7 +194,6 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
 function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
@@ -1683,7 +1680,7 @@ function App() {
     setSidebarOpen = _useState54[1];
   var load = function () {
     var _ref3 = _asyncToGenerator(_regenerator().m(function _callee() {
-      var existing, r, loadedProjects, _r, parsed, loadedCurrent, _r2, existingPosts, _r3, mergedPosts, postsTouched, _iterator, _step, _loop, tmRaw, _parsed, _iterator2, _step2, mig, ran, f, merged, touched, _iterator3, _step3, _loop2, _iterator4, _step4, _mig, _ran, _f2, loadedJobs, _r4, _yield$window$storage, _t6, _t7, _t8, _t9, _t0, _t1, _t10, _t11, _t12, _t13, _t14, _t15, _t16, _t17, _t18, _t19, _t20, _t21, _t22, _t23, _t24, _t25, _t26, _t27, _t28, _t29, _t30, _t31;
+      var existing, r, loadedProjects, _r, parsed, loadedCurrent, _r2, existingPosts, _r3, mergedPosts, postsTouched, _loop, _i, _arr, tmRaw, _parsed, _i2, _arr2, mig, ran, f, merged, touched, _loop2, _i3, _arr3, _i4, _arr4, _mig, _ran, _f2, loadedJobs, _r4, _yield$window$storage, _t6, _t7, _t8, _t9, _t0, _t1, _t10, _t11, _t12, _t13, _t14, _t15, _t16, _t17, _t18, _t19, _t20, _t21, _t22, _t23, _t24, _t25, _t26, _t27;
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.p = _context3.n) {
           case 0:
@@ -1746,14 +1743,12 @@ function App() {
           case 16:
             mergedPosts = _toConsumableArray(existingPosts);
             postsTouched = false;
-            _iterator = _createForOfIteratorHelper(POST_SEED_BATCHES);
-            _context3.p = 17;
             _loop = _regenerator().m(function _loop() {
               var batch, seeded, f, hasAnySeedPost, now, seededPosts, _t, _t2, _t3;
               return _regenerator().w(function (_context) {
                 while (1) switch (_context.p = _context.n) {
                   case 0:
-                    batch = _step.value;
+                    batch = _arr[_i];
                     seeded = false;
                     _context.p = 1;
                     _context.n = 2;
@@ -1816,32 +1811,22 @@ function App() {
                 }
               }, _loop, null, [[10, 12], [5, 7], [1, 3]]);
             });
-            _iterator.s();
-          case 18:
-            if ((_step = _iterator.n()).done) {
-              _context3.n = 20;
+            _i = 0, _arr = [];
+          case 17:
+            if (!(_i < _arr.length)) {
+              _context3.n = 19;
               break;
             }
-            return _context3.d(_regeneratorValues(_loop()), 19);
+            return _context3.d(_regeneratorValues(_loop()), 18);
+          case 18:
+            _i++;
+            _context3.n = 17;
+            break;
           case 19:
-            _context3.n = 18;
-            break;
-          case 20:
-            _context3.n = 22;
-            break;
-          case 21:
-            _context3.p = 21;
-            _t0 = _context3.v;
-            _iterator.e(_t0);
-          case 22:
-            _context3.p = 22;
-            _iterator.f();
-            return _context3.f(22);
-          case 23:
-            _context3.p = 23;
-            _context3.n = 24;
+            _context3.p = 19;
+            _context3.n = 20;
             return window.storage.get(TEAM_KEY, true);
-          case 24:
+          case 20:
             tmRaw = _context3.v;
             if (tmRaw !== null && tmRaw !== void 0 && tmRaw.value) {
               _parsed = JSON.parse(tmRaw.value);
@@ -1850,43 +1835,59 @@ function App() {
                 CURRENT_TEAM = _parsed;
               }
             }
-            _context3.n = 26;
+            _context3.n = 22;
             break;
-          case 25:
-            _context3.p = 25;
-            _t1 = _context3.v;
-          case 26:
-            _iterator2 = _createForOfIteratorHelper(POST_MIGRATIONS);
-            _context3.p = 27;
-            _iterator2.s();
-          case 28:
-            if ((_step2 = _iterator2.n()).done) {
-              _context3.n = 37;
+          case 21:
+            _context3.p = 21;
+            _t0 = _context3.v;
+          case 22:
+            _i2 = 0, _arr2 = [];
+          case 23:
+            if (!(_i2 < _arr2.length)) {
+              _context3.n = 32;
               break;
             }
-            mig = _step2.value;
+            mig = _arr2[_i2];
             ran = false;
-            _context3.p = 29;
-            _context3.n = 30;
+            _context3.p = 24;
+            _context3.n = 25;
             return window.storage.get(mig.flag, true);
-          case 30:
+          case 25:
             f = _context3.v;
             if (f !== null && f !== void 0 && f.value) ran = true;
-            _context3.n = 32;
+            _context3.n = 27;
             break;
-          case 31:
-            _context3.p = 31;
-            _t10 = _context3.v;
-          case 32:
+          case 26:
+            _context3.p = 26;
+            _t1 = _context3.v;
+          case 27:
             if (ran) {
-              _context3.n = 36;
+              _context3.n = 31;
               break;
             }
             mergedPosts = mig.run(mergedPosts);
             postsTouched = true;
+            _context3.p = 28;
+            _context3.n = 29;
+            return window.storage.set(mig.flag, '1', true);
+          case 29:
+            _context3.n = 31;
+            break;
+          case 30:
+            _context3.p = 30;
+            _t10 = _context3.v;
+          case 31:
+            _i2++;
+            _context3.n = 23;
+            break;
+          case 32:
+            if (!postsTouched) {
+              _context3.n = 36;
+              break;
+            }
             _context3.p = 33;
             _context3.n = 34;
-            return window.storage.set(mig.flag, '1', true);
+            return window.storage.set(POSTS_KEY, JSON.stringify(mergedPosts), true);
           case 34:
             _context3.n = 36;
             break;
@@ -1894,34 +1895,6 @@ function App() {
             _context3.p = 35;
             _t11 = _context3.v;
           case 36:
-            _context3.n = 28;
-            break;
-          case 37:
-            _context3.n = 39;
-            break;
-          case 38:
-            _context3.p = 38;
-            _t12 = _context3.v;
-            _iterator2.e(_t12);
-          case 39:
-            _context3.p = 39;
-            _iterator2.f();
-            return _context3.f(39);
-          case 40:
-            if (!postsTouched) {
-              _context3.n = 44;
-              break;
-            }
-            _context3.p = 41;
-            _context3.n = 42;
-            return window.storage.set(POSTS_KEY, JSON.stringify(mergedPosts), true);
-          case 42:
-            _context3.n = 44;
-            break;
-          case 43:
-            _context3.p = 43;
-            _t13 = _context3.v;
-          case 44:
             setPosts(mergedPosts);
             if (!loadedProjects.find(function (p) {
               return p.id === loadedCurrent;
@@ -1930,14 +1903,12 @@ function App() {
             }
             setCurrentProjectId(loadedCurrent);
             merged = _toConsumableArray(existing), touched = false;
-            _iterator3 = _createForOfIteratorHelper(SEED_BATCHES);
-            _context3.p = 45;
             _loop2 = _regenerator().m(function _loop2() {
               var batch, seeded, _f, now, _t4, _t5;
               return _regenerator().w(function (_context2) {
                 while (1) switch (_context2.p = _context2.n) {
                   case 0:
-                    batch = _step3.value;
+                    batch = _arr3[_i3];
                     seeded = false;
                     _context2.p = 1;
                     _context2.n = 2;
@@ -1978,165 +1949,143 @@ function App() {
                 }
               }, _loop2, null, [[5, 7], [1, 3]]);
             });
-            _iterator3.s();
-          case 46:
-            if ((_step3 = _iterator3.n()).done) {
+            _i3 = 0, _arr3 = [];
+          case 37:
+            if (!(_i3 < _arr3.length)) {
+              _context3.n = 39;
+              break;
+            }
+            return _context3.d(_regeneratorValues(_loop2()), 38);
+          case 38:
+            _i3++;
+            _context3.n = 37;
+            break;
+          case 39:
+            _i4 = 0, _arr4 = [];
+          case 40:
+            if (!(_i4 < _arr4.length)) {
+              _context3.n = 49;
+              break;
+            }
+            _mig = _arr4[_i4];
+            _ran = false;
+            _context3.p = 41;
+            _context3.n = 42;
+            return window.storage.get(_mig.flag, true);
+          case 42:
+            _f2 = _context3.v;
+            if (_f2 !== null && _f2 !== void 0 && _f2.value) _ran = true;
+            _context3.n = 44;
+            break;
+          case 43:
+            _context3.p = 43;
+            _t12 = _context3.v;
+          case 44:
+            if (_ran) {
               _context3.n = 48;
               break;
             }
-            return _context3.d(_regeneratorValues(_loop2()), 47);
-          case 47:
+            merged = _mig.run(merged);
+            touched = true;
+            _context3.p = 45;
             _context3.n = 46;
+            return window.storage.set(_mig.flag, '1', true);
+          case 46:
+            _context3.n = 48;
             break;
+          case 47:
+            _context3.p = 47;
+            _t13 = _context3.v;
           case 48:
-            _context3.n = 50;
+            _i4++;
+            _context3.n = 40;
             break;
           case 49:
-            _context3.p = 49;
-            _t14 = _context3.v;
-            _iterator3.e(_t14);
-          case 50:
-            _context3.p = 50;
-            _iterator3.f();
-            return _context3.f(50);
-          case 51:
-            _iterator4 = _createForOfIteratorHelper(MIGRATIONS);
-            _context3.p = 52;
-            _iterator4.s();
-          case 53:
-            if ((_step4 = _iterator4.n()).done) {
-              _context3.n = 62;
+            if (!touched) {
+              _context3.n = 53;
               break;
             }
-            _mig = _step4.value;
-            _ran = false;
+            _context3.p = 50;
+            _context3.n = 51;
+            return window.storage.set(STORAGE_KEY, JSON.stringify(merged), true);
+          case 51:
+            _context3.n = 53;
+            break;
+          case 52:
+            _context3.p = 52;
+            _t14 = _context3.v;
+          case 53:
+            setTasks(merged);
+            loadedJobs = [];
             _context3.p = 54;
             _context3.n = 55;
-            return window.storage.get(_mig.flag, true);
+            return window.storage.get(JOBS_KEY, true);
           case 55:
-            _f2 = _context3.v;
-            if (_f2 !== null && _f2 !== void 0 && _f2.value) _ran = true;
+            _r4 = _context3.v;
+            if (_r4 !== null && _r4 !== void 0 && _r4.value) {
+              loadedJobs = JSON.parse(_r4.value);
+              setJobs(loadedJobs);
+            }
             _context3.n = 57;
             break;
           case 56:
             _context3.p = 56;
             _t15 = _context3.v;
           case 57:
-            if (_ran) {
-              _context3.n = 61;
-              break;
-            }
-            merged = _mig.run(merged);
-            touched = true;
-            _context3.p = 58;
-            _context3.n = 59;
-            return window.storage.set(_mig.flag, '1', true);
-          case 59:
-            _context3.n = 61;
-            break;
-          case 60:
-            _context3.p = 60;
-            _t16 = _context3.v;
-          case 61:
-            _context3.n = 53;
-            break;
-          case 62:
-            _context3.n = 64;
-            break;
-          case 63:
-            _context3.p = 63;
-            _t17 = _context3.v;
-            _iterator4.e(_t17);
-          case 64:
-            _context3.p = 64;
-            _iterator4.f();
-            return _context3.f(64);
-          case 65:
-            if (!touched) {
-              _context3.n = 69;
-              break;
-            }
-            _context3.p = 66;
-            _context3.n = 67;
-            return window.storage.set(STORAGE_KEY, JSON.stringify(merged), true);
-          case 67:
-            _context3.n = 69;
-            break;
-          case 68:
-            _context3.p = 68;
-            _t18 = _context3.v;
-          case 69:
-            setTasks(merged);
-            loadedJobs = [];
-            _context3.p = 70;
-            _context3.n = 71;
-            return window.storage.get(JOBS_KEY, true);
-          case 71:
-            _r4 = _context3.v;
-            if (_r4 !== null && _r4 !== void 0 && _r4.value) {
-              loadedJobs = JSON.parse(_r4.value);
-              setJobs(loadedJobs);
-            }
-            _context3.n = 73;
-            break;
-          case 72:
-            _context3.p = 72;
-            _t19 = _context3.v;
-          case 73:
-            _context3.p = 73;
-            _t20 = saveLocalBackup;
-            _t21 = _defineProperty;
-            _t22 = _defineProperty;
-            _t23 = _defineProperty;
-            _t24 = _defineProperty(_defineProperty(_defineProperty({}, STORAGE_KEY, merged), POSTS_KEY, mergedPosts), JOBS_KEY, loadedJobs);
-            _t25 = TEAM_KEY;
-            _context3.n = 74;
+            _context3.p = 57;
+            _t16 = saveLocalBackup;
+            _t17 = _defineProperty;
+            _t18 = _defineProperty;
+            _t19 = _defineProperty;
+            _t20 = _defineProperty(_defineProperty(_defineProperty({}, STORAGE_KEY, merged), POSTS_KEY, mergedPosts), JOBS_KEY, loadedJobs);
+            _t21 = TEAM_KEY;
+            _context3.n = 58;
             return window.storage.get(TEAM_KEY, true)["catch"](function () {
               return null;
             });
-          case 74:
-            _t28 = _yield$window$storage = _context3.v;
-            _t27 = _t28 !== null;
-            if (!_t27) {
-              _context3.n = 75;
+          case 58:
+            _t24 = _yield$window$storage = _context3.v;
+            _t23 = _t24 !== null;
+            if (!_t23) {
+              _context3.n = 59;
               break;
             }
-            _t27 = _yield$window$storage !== void 0;
-          case 75:
-            _t26 = _t27;
-            if (!_t26) {
-              _context3.n = 76;
+            _t23 = _yield$window$storage !== void 0;
+          case 59:
+            _t22 = _t23;
+            if (!_t22) {
+              _context3.n = 60;
               break;
             }
-            _t26 = _yield$window$storage.value;
-          case 76:
-            if (!_t26) {
-              _context3.n = 78;
+            _t22 = _yield$window$storage.value;
+          case 60:
+            if (!_t22) {
+              _context3.n = 62;
               break;
             }
-            _t30 = JSON;
-            _context3.n = 77;
+            _t26 = JSON;
+            _context3.n = 61;
             return window.storage.get(TEAM_KEY, true);
-          case 77:
-            _t29 = _t30.parse.call(_t30, _context3.v.value);
-            _context3.n = 79;
+          case 61:
+            _t25 = _t26.parse.call(_t26, _context3.v.value);
+            _context3.n = 63;
             break;
-          case 78:
-            _t29 = [];
-          case 79:
-            _t20(_t21(_t22(_t23(_t24, _t25, _t29), PROJECTS_KEY, loadedProjects), CURRENT_PROJECT_KEY, loadedCurrent), 'auto');
-            _context3.n = 81;
+          case 62:
+            _t25 = [];
+          case 63:
+            _t16(_t17(_t18(_t19(_t20, _t21, _t25), PROJECTS_KEY, loadedProjects), CURRENT_PROJECT_KEY, loadedCurrent), 'auto');
+            _context3.n = 65;
             break;
-          case 80:
-            _context3.p = 80;
-            _t31 = _context3.v;
-          case 81:
+          case 64:
+            _context3.p = 64;
+            _t27 = _context3.v;
+          case 65:
             setError(null);
             setLoading(false);
-          case 82:
+          case 66:
             return _context3.a(2);
         }
-      }, _callee, null, [[73, 80], [70, 72], [66, 68], [58, 60], [54, 56], [52, 63, 64, 65], [45, 49, 50, 51], [41, 43], [33, 35], [29, 31], [27, 38, 39, 40], [23, 25], [17, 21, 22, 23], [13, 15], [9, 11], [5, 7], [1, 3]]);
+      }, _callee, null, [[57, 64], [54, 56], [50, 52], [45, 47], [41, 43], [33, 35], [28, 30], [24, 26], [19, 21], [13, 15], [9, 11], [5, 7], [1, 3]]);
     }));
     return function load() {
       return _ref3.apply(this, arguments);
@@ -2156,7 +2105,7 @@ function App() {
   }, []);
   var persist = function () {
     var _ref4 = _asyncToGenerator(_regenerator().m(function _callee2(next) {
-      var _t32;
+      var _t28;
       return _regenerator().w(function (_context4) {
         while (1) switch (_context4.p = _context4.n) {
           case 0:
@@ -2170,7 +2119,7 @@ function App() {
             break;
           case 3:
             _context4.p = 3;
-            _t32 = _context4.v;
+            _t28 = _context4.v;
             setError('บันทึกไม่สำเร็จ');
           case 4:
             _context4.p = 4;
@@ -2187,7 +2136,7 @@ function App() {
   }();
   var persistProjects = function () {
     var _ref5 = _asyncToGenerator(_regenerator().m(function _callee3(next) {
-      var _t33;
+      var _t29;
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.p = _context5.n) {
           case 0:
@@ -2199,7 +2148,7 @@ function App() {
             break;
           case 2:
             _context5.p = 2;
-            _t33 = _context5.v;
+            _t29 = _context5.v;
             setError('บันทึก projects ไม่สำเร็จ');
           case 3:
             return _context5.a(2);
@@ -2212,7 +2161,7 @@ function App() {
   }();
   var switchProject = function () {
     var _ref6 = _asyncToGenerator(_regenerator().m(function _callee4(id) {
-      var _t34;
+      var _t30;
       return _regenerator().w(function (_context6) {
         while (1) switch (_context6.p = _context6.n) {
           case 0:
@@ -2225,7 +2174,7 @@ function App() {
             break;
           case 3:
             _context6.p = 3;
-            _t34 = _context6.v;
+            _t30 = _context6.v;
           case 4:
             return _context6.a(2);
         }
@@ -2337,7 +2286,7 @@ function App() {
   }();
   var persistPosts = function () {
     var _ref9 = _asyncToGenerator(_regenerator().m(function _callee7(next) {
-      var _t35;
+      var _t31;
       return _regenerator().w(function (_context9) {
         while (1) switch (_context9.p = _context9.n) {
           case 0:
@@ -2351,7 +2300,7 @@ function App() {
             break;
           case 3:
             _context9.p = 3;
-            _t35 = _context9.v;
+            _t31 = _context9.v;
             setError('บันทึก post ไม่สำเร็จ');
           case 4:
             _context9.p = 4;
@@ -2431,7 +2380,7 @@ function App() {
   }();
   var persistJobs = function () {
     var _ref10 = _asyncToGenerator(_regenerator().m(function _callee0(next) {
-      var _t36;
+      var _t32;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -2445,7 +2394,7 @@ function App() {
             break;
           case 3:
             _context10.p = 3;
-            _t36 = _context10.v;
+            _t32 = _context10.v;
             setError('บันทึก job ไม่สำเร็จ');
           case 4:
             _context10.p = 4;
@@ -2549,7 +2498,7 @@ function App() {
   }();
   var restoreFromBackup = function () {
     var _ref14 = _asyncToGenerator(_regenerator().m(function _callee12(snapshot, scope) {
-      var data, restorePosts, restoreTasks, restoreJobs, restoreTeam, _t37;
+      var data, restorePosts, restoreTasks, restoreJobs, restoreTeam, _t33;
       return _regenerator().w(function (_context14) {
         while (1) switch (_context14.p = _context14.n) {
           case 0:
@@ -2605,8 +2554,8 @@ function App() {
             break;
           case 10:
             _context14.p = 10;
-            _t37 = _context14.v;
-            setError('กู้คืนไม่สำเร็จ: ' + _t37.message);
+            _t33 = _context14.v;
+            setError('กู้คืนไม่สำเร็จ: ' + _t33.message);
           case 11:
             _context14.p = 11;
             setSyncing(false);
@@ -2713,7 +2662,7 @@ function App() {
   }();
   var saveTeamMembers = function () {
     var _ref18 = _asyncToGenerator(_regenerator().m(function _callee16(members) {
-      var _t38;
+      var _t34;
       return _regenerator().w(function (_context18) {
         while (1) switch (_context18.p = _context18.n) {
           case 0:
@@ -2727,7 +2676,7 @@ function App() {
             break;
           case 3:
             _context18.p = 3;
-            _t38 = _context18.v;
+            _t34 = _context18.v;
           case 4:
             return _context18.a(2);
         }
