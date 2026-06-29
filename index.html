@@ -191,7 +191,7 @@
       subscribeState(cb) {
         return docRef.onSnapshot((snap) => {
           const d = snap.exists ? (snap.data() || {}) : {};
-          const vals = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? Object.keys(m).map((k) => m[k]).filter(Boolean) : [];
+          const vals = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? Object.keys(m).map((k) => m[k]).filter((o) => o && !o._deleted) : [];
           cb({
             tasks: vals(d.T),
             posts: vals(d.P),
@@ -222,6 +222,12 @@
         if (meta) { const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' }; Object.keys(meta).forEach((k) => { u[map[k] || k] = meta[k]; }); }
         return docRef.update(u);
       },
+      softDeleteFields(items, meta) {
+        const u = { _updatedAt: Date.now() };
+        (items || []).forEach((it) => { u[it.field] = u[it.field] || {}; u[it.field][it.id] = { _deleted: true, _deletedAt: new Date().toISOString() }; });
+        if (meta) { const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' }; Object.keys(meta).forEach((k) => { u[map[k] || k] = meta[k]; }); }
+        return docRef.set(u, { merge: true });
+      },
       setMeta(obj) {
         const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' };
         const u = { _updatedAt: Date.now() };
@@ -245,6 +251,14 @@
             await bref.set(Object.assign({}, cur.data(), { _autoBackup: true, _backupDate: today, _backupAt: Date.now() }));
           }
         }
+        // hourly rolling snapshot (bounds worst-case loss to ~1h)
+        const latestRef = col.doc('backup_latest');
+        const lr = await latestRef.get();
+        const lastAt = lr.exists ? (lr.data()._backupAt || 0) : 0;
+        if (Date.now() - lastAt > 3600000) {
+          const cur2 = await docRef.get({ source: 'server' });
+          if (cur2.exists) await latestRef.set(Object.assign({}, cur2.data(), { _autoBackup: true, _backupKind: 'latest', _backupAt: Date.now() }));
+        }
         // prune: keep newest 14 auto-backups
         const snap = await col.get();
         const backups = [];
@@ -257,7 +271,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- v2 LIVE: per-record data layer + auto daily backup -->
+  <!-- v2.1 LIVE: per-record + soft-delete + auto backups (daily+hourly) -->
   <script>
 "use strict";
 
@@ -1915,7 +1929,7 @@ function App() {
   }();
   var deleteProject = function () {
     var _ref0 = _asyncToGenerator(_regenerator().m(function _callee8(id) {
-      var proj, delTasks, delPosts, nextProjects, nextCur, paths, k, chunk, isLast, _t4;
+      var proj, delTasks, delPosts, nextProjects, nextCur, items, k, chunk, isLast, _t4;
       return _regenerator().w(function (_context8) {
         while (1) switch (_context8.p = _context8.n) {
           case 0:
@@ -1947,21 +1961,27 @@ function App() {
               return p.id !== id;
             });
             nextCur = currentProjectId === id ? nextProjects[0].id : currentProjectId;
-            paths = delTasks.map(function (t) {
-              return 'T.' + t.id;
+            items = delTasks.map(function (t) {
+              return {
+                field: 'T',
+                id: t.id
+              };
             }).concat(delPosts.map(function (pp) {
-              return 'P.' + pp.id;
+              return {
+                field: 'P',
+                id: pp.id
+              };
             }));
             k = 0;
           case 4:
-            if (!(k < paths.length)) {
+            if (!(k < items.length)) {
               _context8.n = 6;
               break;
             }
-            chunk = paths.slice(k, k + 200);
-            isLast = k + 200 >= paths.length;
+            chunk = items.slice(k, k + 200);
+            isLast = k + 200 >= items.length;
             _context8.n = 5;
-            return window.fb.deleteFields(chunk, isLast ? {
+            return window.fb.softDeleteFields(chunk, isLast ? {
               projects: nextProjects,
               currentProjectId: nextCur
             } : null);
@@ -1970,7 +1990,7 @@ function App() {
             _context8.n = 4;
             break;
           case 6:
-            if (!(paths.length === 0)) {
+            if (!(items.length === 0)) {
               _context8.n = 7;
               break;
             }
@@ -2059,7 +2079,10 @@ function App() {
           case 1:
             _context0.p = 1;
             _context0.n = 2;
-            return window.fb.delRecord('P', id);
+            return window.fb.patchRecord('P', id, {
+              _deleted: true,
+              _deletedAt: new Date().toISOString()
+            });
           case 2:
             _context0.n = 4;
             break;
@@ -2135,7 +2158,10 @@ function App() {
           case 1:
             _context10.p = 1;
             _context10.n = 2;
-            return window.fb.delRecord('J', id);
+            return window.fb.patchRecord('J', id, {
+              _deleted: true,
+              _deletedAt: new Date().toISOString()
+            });
           case 2:
             _context10.n = 4;
             break;
@@ -2314,7 +2340,10 @@ function App() {
           case 1:
             _context14.p = 1;
             _context14.n = 2;
-            return window.fb.delRecord('T', id);
+            return window.fb.patchRecord('T', id, {
+              _deleted: true,
+              _deletedAt: new Date().toISOString()
+            });
           case 2:
             _context14.n = 4;
             break;
