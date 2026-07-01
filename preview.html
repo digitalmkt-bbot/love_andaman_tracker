@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Creso black-header stat cards + lime filter pills -->
+  <!-- Creso card soft shadow + bigger radius -->
   <script>
 "use strict";
 
@@ -3323,7 +3323,8 @@ function TopBar(_ref23) {
     className: "w-full pl-10 pr-4 py-2.5 text-sm rounded-xl outline-none focus:ring-2 transition",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }))), React.createElement("div", {
     className: "flex items-center gap-2"
@@ -3342,7 +3343,8 @@ function TopBar(_ref23) {
     title: "Refresh",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement(RefreshCw, {
     size: 15,
@@ -3376,7 +3378,7 @@ function TopBar(_ref23) {
 function WelcomeCard(_ref24) {
   var onStart = _ref24.onStart;
   return React.createElement("div", {
-    className: "rounded-2xl overflow-hidden p-6 md:p-8 flex items-center gap-6 relative",
+    className: "rounded-3xl overflow-hidden p-6 md:p-8 flex items-center gap-6 relative",
     style: {
       backgroundImage: 'linear-gradient(135deg,#CDBDF7 0%,#B49BF2 100%)'
     }
@@ -3547,10 +3549,9 @@ function StatsRow(_ref25) {
   }, cards.map(function (c) {
     return React.createElement("div", {
       key: c.label,
-      className: "rounded-3xl overflow-hidden bg-white",
+      className: "rounded-[30px] overflow-hidden bg-white",
       style: {
-        border: "1px solid ".concat(T.border),
-        boxShadow: '0 8px 26px rgba(20,20,50,0.07)'
+        boxShadow: '0 18px 40px rgba(30,30,80,0.12), 0 5px 14px rgba(30,30,80,0.06)'
       }
     }, React.createElement("div", {
       className: "relative px-5 py-3.5",
@@ -3617,10 +3618,11 @@ function ChartCard(_ref29) {
     children = _ref29.children,
     action = _ref29.action;
   return React.createElement("div", {
-    className: "rounded-2xl p-5 md:p-6 h-full",
+    className: "rounded-3xl p-5 md:p-6 h-full",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-start justify-between mb-4"
@@ -3980,10 +3982,11 @@ function DueSoonSection(_ref37) {
     onEdit = _ref37.onEdit;
   if (tasks.length === 0) return null;
   return React.createElement("div", {
-    className: "rounded-2xl p-5",
+    className: "rounded-3xl p-5",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-baseline justify-between mb-3"
@@ -4076,10 +4079,11 @@ function PlanningPostSummary(_ref38) {
     color: '#5B3FA6'
   }];
   return React.createElement("div", {
-    className: "rounded-2xl p-5",
+    className: "rounded-3xl p-5",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-baseline justify-between mb-3"
@@ -4214,10 +4218,11 @@ function MiniCalendar(_ref39) {
   };
   var rangeLabel = range !== null && range !== void 0 && range.start ? range.end && range.end.getTime() !== range.start.getTime() ? "".concat(fmt(range.start), " \u2014 ").concat(fmt(range.end)) : fmt(range.start) : '';
   return React.createElement("div", {
-    className: "rounded-2xl p-5",
+    className: "rounded-3xl p-5",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center justify-between mb-2"
@@ -4385,10 +4390,11 @@ function UpcomingList(_ref40) {
   var items = _ref40.items,
     onEditTask = _ref40.onEditTask;
   return React.createElement("div", {
-    className: "rounded-2xl p-5",
+    className: "rounded-3xl p-5",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-baseline justify-between mb-1"
@@ -4576,10 +4582,11 @@ function FilterBar(_ref44) {
     c: STATUS_META.overdue.color
   }];
   return React.createElement("div", {
-    className: "rounded-2xl p-4 space-y-3",
+    className: "rounded-3xl p-4 space-y-3",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 flex-wrap"
@@ -4667,10 +4674,11 @@ function TaskCard(_ref45) {
   var catColor = getCategoryColor(task.category);
   var rel = relativeDeadline(task.deadline);
   return React.createElement("div", {
-    className: "rounded-2xl p-4 group hover:shadow-md transition flex flex-col",
+    className: "rounded-3xl p-4 group hover:shadow-md transition flex flex-col",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center justify-between mb-3"
@@ -4792,7 +4800,7 @@ function PostCard(_ref46) {
   var days = post.date ? daysFromToday(post.date) : null;
   var rel = post.date ? relativeDeadline(post.date) : '';
   return React.createElement("div", {
-    className: "rounded-2xl p-4 group hover:shadow-md transition flex flex-col",
+    className: "rounded-3xl p-4 group hover:shadow-md transition flex flex-col",
     style: {
       backgroundColor: T.cardBg,
       border: "1px solid ".concat(T.border),
@@ -4989,10 +4997,11 @@ function PRJobs(_ref47) {
   }, React.createElement(Plus, {
     size: 16
   }), " Add New Jobs"))), React.createElement("div", {
-    className: "rounded-2xl p-4 space-y-3",
+    className: "rounded-3xl p-4 space-y-3",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 flex-wrap"
@@ -5066,13 +5075,13 @@ function PRJobs(_ref47) {
       }
     }, m.name));
   }))), jobs.length === 0 ? React.createElement("div", {
-    className: "rounded-2xl border-2 border-dashed py-16 text-center",
+    className: "rounded-3xl border-2 border-dashed py-16 text-center",
     style: {
       borderColor: T.border,
       backgroundColor: T.cardBg
     }
   }, React.createElement("div", {
-    className: "w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center",
+    className: "w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center",
     style: {
       background: "linear-gradient(135deg, ".concat(T.pillBlue, " 0%, #E3D6FA 100%)")
     }
@@ -5130,7 +5139,7 @@ function JobCard(_ref48) {
   var catColor = getJobCategoryColor(job.category);
   var rel = relativeDeadline(job.deadline);
   return React.createElement("div", {
-    className: "rounded-2xl p-4 group hover:shadow-md transition flex flex-col",
+    className: "rounded-3xl p-4 group hover:shadow-md transition flex flex-col",
     style: {
       backgroundColor: T.cardBg,
       border: "1px solid ".concat(T.border),
@@ -5301,7 +5310,7 @@ function JobModal(_ref49) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden",
+    className: "w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg
     },
@@ -5574,7 +5583,7 @@ function BackupModal(_ref50) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden",
+    className: "w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg
     },
@@ -5886,13 +5895,13 @@ function EmptyState(_ref53) {
   var onAdd = _ref53.onAdd,
     hasTasks = _ref53.hasTasks;
   return React.createElement("div", {
-    className: "rounded-2xl border-2 border-dashed py-16 text-center",
+    className: "rounded-3xl border-2 border-dashed py-16 text-center",
     style: {
       borderColor: T.border,
       backgroundColor: T.cardBg
     }
   }, React.createElement("div", {
-    className: "w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center",
+    className: "w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center",
     style: {
       background: "linear-gradient(135deg, ".concat(T.pillBlue, " 0%, #C6CBF7 100%)")
     }
@@ -5978,7 +5987,7 @@ function TaskModal(_ref54) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden",
+    className: "w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg
     },
@@ -6166,7 +6175,7 @@ function WorkHistory(_ref56) {
     currentProject = _ref56.currentProject;
   if (tasks.length === 0) {
     return React.createElement("div", {
-      className: "rounded-2xl border-2 border-dashed py-16 text-center",
+      className: "rounded-3xl border-2 border-dashed py-16 text-center",
       style: {
         borderColor: T.border,
         backgroundColor: T.cardBg
@@ -6314,7 +6323,8 @@ function HistoryRow(_ref57) {
     className: "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer hover:shadow transition group",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("span", {
     className: "w-2 h-10 rounded-full flex-shrink-0",
@@ -6411,7 +6421,7 @@ function ProjectModal(_ref58) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-md rounded-2xl shadow-2xl overflow-hidden",
+    className: "w-full max-w-md rounded-3xl shadow-2xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg
     },
@@ -6546,7 +6556,7 @@ function TeamModal(_ref59) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
+    className: "w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
     style: {
       backgroundColor: T.cardBg
     },
@@ -6789,7 +6799,8 @@ function PlanningPost(_ref60) {
     className: "rounded-xl px-4 py-2.5 flex items-center justify-between text-xs",
     style: {
       backgroundColor: T.pillBlue,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center gap-3 flex-wrap"
@@ -6808,10 +6819,11 @@ function PlanningPost(_ref60) {
     },
     className: "font-semibold"
   }, "\u26A0\uFE0F \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 \u2014 \u0E01\u0E14 Reload \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E42\u0E2B\u0E25\u0E14\u0E08\u0E32\u0E01 Cloud")), React.createElement("div", {
-    className: "rounded-2xl p-4 flex flex-wrap items-center gap-2",
+    className: "rounded-3xl p-4 flex flex-wrap items-center gap-2",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 flex-wrap"
@@ -6862,7 +6874,7 @@ function PlanningPost(_ref60) {
       color: T.textMuted
     }
   }, posts.length, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")), posts.length === 0 ? React.createElement("div", {
-    className: "rounded-2xl border-2 border-dashed py-16 text-center",
+    className: "rounded-3xl border-2 border-dashed py-16 text-center",
     style: {
       borderColor: T.border,
       backgroundColor: T.cardBg
@@ -6903,10 +6915,11 @@ function PlanningPost(_ref60) {
   }, React.createElement(RefreshCw, {
     size: 14
   }), " \u0E25\u0E49\u0E32\u0E07 filter \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \u2192 \u0E14\u0E39\u0E04\u0E23\u0E1A ", totalCount, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")) : React.createElement("div", {
-    className: "rounded-2xl overflow-hidden",
+    className: "rounded-3xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      border: "1px solid ".concat(T.border),
+      boxShadow: '0 10px 30px rgba(30,30,80,0.06)'
     }
   }, React.createElement("div", {
     className: "overflow-x-auto"
@@ -7204,7 +7217,7 @@ function PostModal(_ref65) {
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden",
+    className: "w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden",
     style: {
       backgroundColor: T.cardBg
     },
