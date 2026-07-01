@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Creso components: white stat cards + purple hero + lime -->
+  <!-- Creso: white capsule nav, black text, bleed right -->
   <script>
 "use strict";
 
@@ -1447,7 +1447,7 @@ var dayFromDate = function dayFromDate(dateStr) {
 var T = {
   sidebarBg: '#3B39E4',
   sidebarHover: '#4E4CEC',
-  sidebarActive: '#CDF23D',
+  sidebarActive: '#FFFFFF',
   sidebarText: '#C3C2F7',
   sidebarTitle: '#FFFFFF',
   mainBg: '#F5F5F1',
@@ -3239,9 +3239,13 @@ function NavItem(_ref22) {
   var cls = active ? 'text-gray-900' : disabled ? 'text-indigo-300 cursor-not-allowed' : 'text-indigo-100 hover:text-white';
   return React.createElement("button", {
     onClick: disabled ? undefined : onClick,
-    className: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ".concat(cls),
+    className: "w-full flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition ".concat(cls),
     style: active ? {
-      backgroundColor: T.sidebarActive
+      backgroundColor: T.sidebarActive,
+      marginRight: '-0.75rem',
+      borderTopRightRadius: 0,
+      borderBottomRightRadius: 0,
+      boxShadow: '0 6px 18px rgba(20,20,50,0.12)'
     } : {}
   }, React.createElement(Icon, {
     size: 18
