@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Creso-inspired theme (blue sidebar + lime + purple) -->
+  <!-- Creso components: white stat cards + purple hero + lime -->
   <script>
 "use strict";
 
@@ -3376,31 +3376,30 @@ function WelcomeCard(_ref24) {
   return React.createElement("div", {
     className: "rounded-2xl overflow-hidden p-6 md:p-8 flex items-center gap-6 relative",
     style: {
-      backgroundColor: T.cardBg,
-      border: "1px solid ".concat(T.border)
+      backgroundImage: 'linear-gradient(135deg,#CDBDF7 0%,#B49BF2 100%)'
     }
   }, React.createElement("div", {
     className: "flex-1 min-w-0 z-10"
   }, React.createElement("div", {
-    className: "text-sm font-medium mb-1",
+    className: "text-sm font-semibold mb-1",
     style: {
-      color: T.textMuted
+      color: '#4A3A6A'
     }
   }, "Welcome To"), React.createElement("h2", {
-    className: "text-2xl md:text-3xl font-bold mb-3",
+    className: "text-2xl md:text-3xl font-extrabold mb-3",
     style: {
-      color: T.text
+      color: '#1A1533'
     }
   }, "Your Task Management Area"), React.createElement("p", {
     className: "text-sm leading-relaxed mb-5 max-w-md",
     style: {
-      color: T.textMuted
+      color: '#3E2E5E'
     }
   }, "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E07\u0E32\u0E19\u0E17\u0E35\u0E21 Marketing \u0E17\u0E35\u0E48\u0E19\u0E35\u0E48\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21 Task, \u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 progress, \u0E14\u0E39\u0E20\u0E32\u0E23\u0E30\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E21 \u0E41\u0E25\u0E30\u0E08\u0E31\u0E14\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E04\u0E31\u0E0D\u0E44\u0E14\u0E49\u0E43\u0E19\u0E17\u0E35\u0E48\u0E40\u0E14\u0E35\u0E22\u0E27"), React.createElement("button", {
     onClick: onStart,
-    className: "px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow transition",
+    className: "px-6 py-2.5 rounded-full text-sm font-bold text-gray-900 shadow-sm hover:shadow transition",
     style: {
-      backgroundColor: T.navy
+      backgroundColor: '#CDF23D'
     }
   }, "Learn More")), React.createElement("div", {
     className: "hidden md:block flex-shrink-0"
@@ -3518,26 +3517,30 @@ function StatsRow(_ref25) {
   var stats = _ref25.stats;
   var cards = [{
     label: 'Total Task',
+    sub: 'งานทั้งหมด',
     value: stats.total,
-    bg: '#DDF07A',
-    accent: '#3F4A12',
+    tint: '#DDF07A',
+    accent: '#4F5A15',
     IconCmp: ChipCheck
   }, {
     label: 'InProgress',
+    sub: 'กำลังทำ',
     value: stats.inProgress,
-    bg: '#E3D6FA',
+    tint: '#E3D6FA',
     accent: '#5B3FA6',
     IconCmp: ChipCircle
   }, {
     label: 'Pending',
+    sub: 'รอดำเนินการ',
     value: stats.notStarted + stats.overdue,
-    bg: '#C6CBF7',
+    tint: '#C6CBF7',
     accent: '#2F3B9E',
     IconCmp: ChipAlert
   }, {
     label: 'Completed',
+    sub: 'เสร็จแล้ว',
     value: stats.done,
-    bg: '#D3EDBF',
+    tint: '#D3EDBF',
     accent: '#3E7A2E',
     IconCmp: ChipCheck
   }];
@@ -3547,26 +3550,37 @@ function StatsRow(_ref25) {
     var Ic = c.IconCmp;
     return React.createElement("div", {
       key: c.label,
-      className: "rounded-2xl p-5 flex items-center gap-4",
+      className: "rounded-2xl p-5 bg-white",
       style: {
-        backgroundColor: c.bg
+        border: "1px solid ".concat(T.border),
+        boxShadow: '0 6px 22px rgba(30,30,60,0.05)'
       }
     }, React.createElement("div", {
-      className: "w-11 h-11 rounded-full flex items-center justify-center bg-white shadow-sm"
+      className: "flex items-center justify-between mb-4"
+    }, React.createElement("div", {
+      className: "w-10 h-10 rounded-full flex items-center justify-center",
+      style: {
+        backgroundColor: c.tint
+      }
     }, React.createElement(Ic, {
       color: c.accent
-    })), React.createElement("div", null, React.createElement("div", {
-      className: "text-3xl font-bold leading-none",
+    })), React.createElement("span", {
+      className: "text-[11px] font-bold px-2.5 py-1 rounded-full",
       style: {
+        backgroundColor: c.tint,
         color: c.accent
       }
-    }, String(c.value).padStart(2, '0')), React.createElement("div", {
-      className: "text-xs mt-1.5 font-medium",
+    }, c.label)), React.createElement("div", {
+      className: "text-4xl font-extrabold leading-none",
       style: {
-        color: c.accent,
-        opacity: 0.85
+        color: T.text
       }
-    }, c.label)));
+    }, String(c.value).padStart(2, '0')), React.createElement("div", {
+      className: "text-xs mt-2 font-medium",
+      style: {
+        color: T.textMuted
+      }
+    }, c.sub));
   }));
 }
 var ChipCheck = function ChipCheck(_ref26) {
