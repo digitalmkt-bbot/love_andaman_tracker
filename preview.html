@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Creso: white capsule nav, black text, bleed right -->
+  <!-- Creso: floating rounded sidebar + full capsule nav -->
   <script>
 "use strict";
 
@@ -2674,7 +2674,7 @@ function App() {
       return setShowBackupModal(true);
     }
   }), React.createElement("div", {
-    className: "flex-1 flex flex-col min-w-0 lg:ml-64 xl:mr-80"
+    className: "flex-1 flex flex-col min-w-0 lg:ml-[16.5rem] xl:mr-80"
   }, React.createElement(TopBar, {
     search: search,
     setSearch: setSearch,
@@ -3042,9 +3042,10 @@ function Sidebar(_ref21) {
     className: "lg:hidden fixed inset-0 bg-black/50 z-40",
     onClick: onClose
   }), React.createElement("aside", {
-    className: "fixed top-0 left-0 bottom-0 w-64 z-50 flex flex-col transform transition-transform lg:translate-x-0 ".concat(open ? 'translate-x-0' : '-translate-x-full'),
+    className: "fixed top-0 left-0 bottom-0 lg:top-4 lg:left-4 lg:bottom-4 w-64 lg:w-60 z-50 flex flex-col transform transition-transform lg:translate-x-0 lg:rounded-[30px] overflow-hidden ".concat(open ? 'translate-x-0' : '-translate-x-full'),
     style: {
-      backgroundColor: T.sidebarBg
+      backgroundColor: T.sidebarBg,
+      boxShadow: '0 14px 40px rgba(30,30,90,0.22)'
     }
   }, React.createElement("div", {
     className: "px-6 pt-6 pb-5 flex items-center justify-between"
@@ -3242,10 +3243,7 @@ function NavItem(_ref22) {
     className: "w-full flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition ".concat(cls),
     style: active ? {
       backgroundColor: T.sidebarActive,
-      marginRight: '-0.75rem',
-      borderTopRightRadius: 0,
-      borderBottomRightRadius: 0,
-      boxShadow: '0 6px 18px rgba(20,20,50,0.12)'
+      boxShadow: '0 6px 18px rgba(20,20,50,0.14)'
     } : {}
   }, React.createElement(Icon, {
     size: 18
