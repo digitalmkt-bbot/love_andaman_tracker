@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- v2.2 LIVE: per-record + soft-delete + backups (daily + 15-min rolling) -->
+  <!-- v2.3 LIVE: Tracking sorted newest-first -->
   <script>
 "use strict";
 
@@ -2624,9 +2624,9 @@ function App() {
     });
     var all = [].concat(_toConsumableArray(taskItems), _toConsumableArray(postItems));
     all.sort(function (a, b) {
-      var da = a.__itemType === 'task' ? a.deadline ? new Date(a.deadline).getTime() : Infinity : a.date ? new Date(a.date).getTime() : Infinity;
-      var db = b.__itemType === 'task' ? b.deadline ? new Date(b.deadline).getTime() : Infinity : b.date ? new Date(b.date).getTime() : Infinity;
-      return da - db;
+      var da = a.__itemType === 'task' ? a.deadline ? new Date(a.deadline).getTime() : -Infinity : a.date ? new Date(a.date).getTime() : -Infinity;
+      var db = b.__itemType === 'task' ? b.deadline ? new Date(b.deadline).getTime() : -Infinity : b.date ? new Date(b.date).getTime() : -Infinity;
+      return db - da;
     });
     return all;
   }, [projectTasks, projectPosts, filterStatus, filterCategory, filterPerson, search]);
