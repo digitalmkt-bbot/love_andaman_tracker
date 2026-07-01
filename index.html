@@ -286,7 +286,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- v3.0 LIVE: Locust-inspired theme (per-record data + soft-delete + auto backups) -->
+  <!-- Locust theme + Logout button -->
   <script>
 "use strict";
 
@@ -3238,7 +3238,46 @@ function Sidebar(_ref21) {
     style: {
       color: T.sidebarText
     }
-  })))));
+  }))), React.createElement("div", {
+    className: "px-4 pb-5"
+  }, React.createElement("button", {
+    onClick: function onClick() {
+      if (confirm('ออกจากระบบ? (ต้องกรอกรหัสผ่านทีมใหม่)')) {
+        try {
+          Object.keys(localStorage).filter(function (k) {
+            return k.indexOf('la_unlocked_') === 0;
+          }).forEach(function (k) {
+            return localStorage.removeItem(k);
+          });
+        } catch (e) {}
+        location.reload();
+      }
+    },
+    className: "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl text-sm font-semibold transition hover:bg-black/5",
+    style: {
+      backgroundColor: T.sidebarHover,
+      color: T.text
+    },
+    title: "\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E30\u0E1A\u0E1A \u2014 \u0E15\u0E49\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E01\u0E23\u0E2B\u0E31\u0E2A\u0E1C\u0E48\u0E32\u0E19\u0E17\u0E35\u0E21\u0E43\u0E2B\u0E21\u0E48"
+  }, React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("path", {
+    d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+  }), React.createElement("polyline", {
+    points: "16 17 21 12 16 7"
+  }), React.createElement("line", {
+    x1: "21",
+    x2: "9",
+    y1: "12",
+    y2: "12"
+  })), "Logout"))));
 }
 function NavItem(_ref22) {
   var Icon = _ref22.icon,
