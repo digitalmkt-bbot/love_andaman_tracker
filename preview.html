@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- LOCUST-inspired theme preview (light cream + black + mint + blue) -->
+  <!-- LOCUST theme v2 (blue-gray sidebar, cream pill, black hero card, blue chart) -->
   <script>
 "use strict";
 
@@ -1445,9 +1445,9 @@ var dayFromDate = function dayFromDate(dateStr) {
   return DAYS[(idx + 6) % 7];
 };
 var T = {
-  sidebarBg: '#FFFFFF',
-  sidebarHover: '#F1EFE9',
-  sidebarActive: '#1A1A1A',
+  sidebarBg: '#E8ECEF',
+  sidebarHover: '#F5F7F8',
+  sidebarActive: '#F3EBC0',
   sidebarText: '#8A8A80',
   sidebarTitle: '#1A1A1A',
   mainBg: '#F5F3EE',
@@ -3236,7 +3236,7 @@ function NavItem(_ref22) {
     active = _ref22.active,
     disabled = _ref22.disabled,
     onClick = _ref22.onClick;
-  var cls = active ? 'text-white' : disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-900';
+  var cls = active ? 'text-gray-900' : disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-900';
   return React.createElement("button", {
     onClick: disabled ? undefined : onClick,
     className: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ".concat(cls),
@@ -3250,8 +3250,8 @@ function NavItem(_ref22) {
   }, label), badge != null && React.createElement("span", {
     className: "text-[10px] px-1.5 py-0.5 rounded font-bold",
     style: {
-      backgroundColor: active ? 'rgba(255,255,255,0.2)' : T.sidebarHover,
-      color: active ? 'white' : T.text
+      backgroundColor: active ? 'rgba(0,0,0,0.08)' : T.sidebarHover,
+      color: T.text
     }
   }, badge));
 }
@@ -3519,8 +3519,9 @@ function StatsRow(_ref25) {
   var cards = [{
     label: 'Total Task',
     value: stats.total,
-    bg: '#DDEAE1',
-    accent: T.navy,
+    bg: '#1A1A1A',
+    accent: '#FFFFFF',
+    dark: true,
     IconCmp: ChipCheck
   }, {
     label: 'InProgress',
@@ -3552,18 +3553,21 @@ function StatsRow(_ref25) {
         backgroundColor: c.bg
       }
     }, React.createElement("div", {
-      className: "w-11 h-11 rounded-full flex items-center justify-center bg-white shadow-sm"
+      className: "w-11 h-11 rounded-full flex items-center justify-center shadow-sm",
+      style: {
+        backgroundColor: c.dark ? 'rgba(255,255,255,0.14)' : '#FFFFFF'
+      }
     }, React.createElement(Ic, {
-      color: c.accent
+      color: c.dark ? '#FFFFFF' : c.accent
     })), React.createElement("div", null, React.createElement("div", {
       className: "text-3xl font-bold leading-none",
       style: {
-        color: c.accent
+        color: c.dark ? '#FFFFFF' : c.accent
       }
     }, String(c.value).padStart(2, '0')), React.createElement("div", {
       className: "text-xs mt-1.5 font-medium",
       style: {
-        color: c.accent,
+        color: c.dark ? '#FFFFFF' : c.accent,
         opacity: 0.85
       }
     }, c.label)));
@@ -3647,11 +3651,11 @@ function CategoryAreaChart(_ref30) {
     y2: "1"
   }, React.createElement("stop", {
     offset: "0%",
-    stopColor: T.navy,
+    stopColor: "#3B9AE1",
     stopOpacity: 0.4
   }), React.createElement("stop", {
     offset: "100%",
-    stopColor: T.navy,
+    stopColor: "#3B9AE1",
     stopOpacity: 0
   })), React.createElement("linearGradient", {
     id: "gb",
@@ -3661,11 +3665,11 @@ function CategoryAreaChart(_ref30) {
     y2: "1"
   }, React.createElement("stop", {
     offset: "0%",
-    stopColor: T.cyan,
-    stopOpacity: 0.4
+    stopColor: "#2E7A4E",
+    stopOpacity: 0.35
   }), React.createElement("stop", {
     offset: "100%",
-    stopColor: T.cyan,
+    stopColor: "#2E7A4E",
     stopOpacity: 0
   }))), React.createElement(XAxis, {
     dataKey: "name",
@@ -3691,14 +3695,14 @@ function CategoryAreaChart(_ref30) {
   }), React.createElement(Area, {
     type: "monotone",
     dataKey: "tasks",
-    stroke: T.navy,
+    stroke: "#3B9AE1",
     fill: "url(#ga)",
     strokeWidth: 2.5,
     name: "\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"
   }), React.createElement(Area, {
     type: "monotone",
     dataKey: "done",
-    stroke: T.cyan,
+    stroke: "#2E7A4E",
     fill: "url(#gb)",
     strokeWidth: 2.5,
     name: "\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27"
