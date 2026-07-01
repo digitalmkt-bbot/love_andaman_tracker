@@ -285,7 +285,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- Creso: floating rounded sidebar + full capsule nav -->
+  <!-- Creso black-header stat cards + lime filter pills -->
   <script>
 "use strict";
 
@@ -3521,68 +3521,67 @@ function StatsRow(_ref25) {
     label: 'Total Task',
     sub: 'งานทั้งหมด',
     value: stats.total,
-    tint: '#DDF07A',
-    accent: '#4F5A15',
-    IconCmp: ChipCheck
+    accent: '#7EA800',
+    up: true
   }, {
     label: 'InProgress',
     sub: 'กำลังทำ',
     value: stats.inProgress,
-    tint: '#E3D6FA',
-    accent: '#5B3FA6',
-    IconCmp: ChipCircle
+    accent: '#6A4AC0',
+    up: true
   }, {
     label: 'Pending',
     sub: 'รอดำเนินการ',
     value: stats.notStarted + stats.overdue,
-    tint: '#C6CBF7',
-    accent: '#2F3B9E',
-    IconCmp: ChipAlert
+    accent: '#E0447A',
+    up: false
   }, {
     label: 'Completed',
     sub: 'เสร็จแล้ว',
     value: stats.done,
-    tint: '#D3EDBF',
-    accent: '#3E7A2E',
-    IconCmp: ChipCheck
+    accent: '#1FA971',
+    up: true
   }];
   return React.createElement("div", {
     className: "grid grid-cols-2 md:grid-cols-4 gap-4"
   }, cards.map(function (c) {
-    var Ic = c.IconCmp;
     return React.createElement("div", {
       key: c.label,
-      className: "rounded-2xl p-5 bg-white",
+      className: "rounded-3xl overflow-hidden bg-white",
       style: {
         border: "1px solid ".concat(T.border),
-        boxShadow: '0 6px 22px rgba(30,30,60,0.05)'
+        boxShadow: '0 8px 26px rgba(20,20,50,0.07)'
       }
     }, React.createElement("div", {
-      className: "flex items-center justify-between mb-4"
+      className: "relative px-5 py-3.5",
+      style: {
+        backgroundColor: '#0D0D0D'
+      }
+    }, React.createElement("span", {
+      className: "text-sm font-bold text-white"
+    }, c.label), React.createElement("div", {
+      style: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+        borderTop: '26px solid #FFFFFF',
+        borderLeft: '26px solid transparent'
+      }
+    })), React.createElement("div", {
+      className: "px-5 pt-4 pb-4"
     }, React.createElement("div", {
-      className: "w-10 h-10 rounded-full flex items-center justify-center",
+      className: "text-3xl md:text-4xl font-extrabold leading-none",
       style: {
-        backgroundColor: c.tint
-      }
-    }, React.createElement(Ic, {
-      color: c.accent
-    })), React.createElement("span", {
-      className: "text-[11px] font-bold px-2.5 py-1 rounded-full",
-      style: {
-        backgroundColor: c.tint,
-        color: c.accent
-      }
-    }, c.label)), React.createElement("div", {
-      className: "text-4xl font-extrabold leading-none",
-      style: {
-        color: T.text
+        color: '#0D0D0D'
       }
     }, String(c.value).padStart(2, '0')), React.createElement("div", {
-      className: "text-xs mt-2 font-medium",
+      className: "flex items-center gap-1 mt-2 text-sm font-bold",
       style: {
-        color: T.textMuted
+        color: c.accent
       }
-    }, c.sub));
+    }, React.createElement("span", null, c.up ? '▲' : '▼'), React.createElement("span", null, c.sub))));
   }));
 }
 var ChipCheck = function ChipCheck(_ref26) {
@@ -4593,9 +4592,9 @@ function FilterBar(_ref44) {
       },
       className: "px-3.5 py-1.5 text-xs font-semibold rounded-full border transition",
       style: {
-        borderColor: active ? s.c : T.border,
-        backgroundColor: active ? s.c : 'white',
-        color: active ? 'white' : T.textMuted
+        borderColor: active ? '#CDF23D' : T.border,
+        backgroundColor: active ? '#CDF23D' : 'white',
+        color: active ? '#141414' : T.textMuted
       }
     }, s.l);
   }), React.createElement("span", {
@@ -5006,9 +5005,9 @@ function PRJobs(_ref47) {
       },
       className: "px-3.5 py-1.5 text-xs font-semibold rounded-full border transition",
       style: {
-        borderColor: active ? s.c : T.border,
-        backgroundColor: active ? s.c : 'white',
-        color: active ? 'white' : T.textMuted
+        borderColor: active ? '#CDF23D' : T.border,
+        backgroundColor: active ? '#CDF23D' : 'white',
+        color: active ? '#141414' : T.textMuted
       }
     }, s.l);
   }), React.createElement("span", {
