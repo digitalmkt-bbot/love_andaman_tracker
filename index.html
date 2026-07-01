@@ -255,7 +255,7 @@
         const latestRef = col.doc('backup_latest');
         const lr = await latestRef.get();
         const lastAt = lr.exists ? (lr.data()._backupAt || 0) : 0;
-        if (Date.now() - lastAt > 3600000) {
+        if (Date.now() - lastAt > 900000) {
           const cur2 = await docRef.get({ source: 'server' });
           if (cur2.exists) await latestRef.set(Object.assign({}, cur2.data(), { _autoBackup: true, _backupKind: 'latest', _backupAt: Date.now() }));
         }
@@ -268,10 +268,24 @@
       } catch (e) { console.warn('auto-backup error:', e); }
     };
     setTimeout(function () { window.ensureDailyBackup(); }, 2500);
+    // Lightweight 15-minute rolling snapshot (bounds worst-case loss to ~15 min while app is open)
+    window.snapshotLatest = async function () {
+      try {
+        const col = db.collection(DOC_PATH.col);
+        const latestRef = col.doc('backup_latest');
+        const lr = await latestRef.get();
+        const lastAt = lr.exists ? (lr.data()._backupAt || 0) : 0;
+        if (Date.now() - lastAt > 900000) {
+          const cur = await docRef.get({ source: 'server' });
+          if (cur.exists) await latestRef.set(Object.assign({}, cur.data(), { _autoBackup: true, _backupKind: 'latest', _backupAt: Date.now() }));
+        }
+      } catch (e) { console.warn('snapshotLatest error:', e); }
+    };
+    setInterval(function () { window.snapshotLatest(); }, 900000);
   </script>
 
   <!-- Main application -->
-  <!-- v2.1 LIVE: per-record + soft-delete + auto backups (daily+hourly) -->
+  <!-- v2.2 LIVE: per-record + soft-delete + backups (daily + 15-min rolling) -->
   <script>
 "use strict";
 
