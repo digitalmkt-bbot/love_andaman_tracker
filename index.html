@@ -1515,7 +1515,7 @@ var newId = function newId() {
   return 'tsk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 };
 var formatDateLong = function formatDateLong(d) {
-  return new Intl.DateTimeFormat('th-TH', {
+  return new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
@@ -3061,11 +3061,11 @@ function Sidebar(_ref21) {
     className: "flex items-center gap-2.5"
   }, React.createElement("img", {
     src: LOGO_URL,
-    alt: "Love Andaman",
+    alt: "Marketing Team",
     className: "w-10 h-10 object-contain"
   }), React.createElement("div", {
     className: "text-gray-900 text-lg font-bold tracking-tight leading-tight"
-  }, "Love", React.createElement("br", null), "Andaman")), React.createElement("button", {
+  }, "Marketing", React.createElement("br", null), "Team")), React.createElement("button", {
     onClick: onClose,
     className: "lg:hidden text-slate-400"
   }, React.createElement(X, {
@@ -3985,7 +3985,7 @@ function WorkProgressList(_ref35) {
         borderColor: T.border,
         color: T.textMuted
       }
-    }, React.createElement("span", null, "End: ", new Intl.DateTimeFormat('th-TH', {
+    }, React.createElement("span", null, "End: ", new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric',
       month: 'short'
     }).format(new Date(t.deadline))), React.createElement("span", {
@@ -4096,7 +4096,7 @@ function DueSoonSection(_ref37) {
       style: {
         color: T.textMuted
       }
-    }, new Intl.DateTimeFormat('th-TH', {
+    }, new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric',
       month: 'short'
     }).format(new Date(t.deadline)))));
@@ -4255,7 +4255,7 @@ function MiniCalendar(_ref39) {
     return new Date(a.deadline) - new Date(b.deadline);
   }) : [];
   var fmt = function fmt(d) {
-    return new Intl.DateTimeFormat('th-TH', {
+    return new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric',
       month: 'short'
     }).format(d);
@@ -4403,7 +4403,7 @@ function MiniCalendar(_ref39) {
       style: {
         color: T.textMuted
       }
-    }, new Intl.DateTimeFormat('th-TH', {
+    }, new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric',
       month: 'short'
     }).format(new Date(t.deadline)))), React.createElement("div", {
@@ -4472,7 +4472,7 @@ function UpcomingList(_ref40) {
       style: {
         color: days <= 0 ? '#3A3A34' : T.text
       }
-    }, new Intl.DateTimeFormat('th-TH', {
+    }, new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric'
     }).format(new Date(t.deadline))), React.createElement("div", {
       className: "text-[10px]",
@@ -4944,7 +4944,7 @@ function PostCard(_ref46) {
       color: days < 0 ? T.textMuted : days <= 3 ? '#8A6A2E' : T.textMuted,
       fontWeight: 600
     }
-  }, new Intl.DateTimeFormat('th-TH', {
+  }, new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
     day: 'numeric',
     month: 'short'
   }).format(new Date(post.date)), post.time && " \xB7 ".concat(post.time)))));
@@ -5607,12 +5607,12 @@ function BackupModal(_ref50) {
     if (!selected) return;
     var targetCount = scope === 'posts' ? selected.counts.posts : scope === 'tasks' ? selected.counts.tasks : scope === 'jobs' ? selected.counts.jobs : scope === 'team' ? selected.counts.team : selected.counts.posts + selected.counts.tasks + selected.counts.jobs;
     var currentCount = scope === 'posts' ? currentCounts.posts : scope === 'tasks' ? currentCounts.tasks : scope === 'jobs' ? currentCounts.jobs : scope === 'team' ? currentCounts.team : currentCounts.posts + currentCounts.tasks + currentCounts.jobs;
-    var msg = "\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E01\u0E32\u0E23\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19?\n\n\u0E08\u0E30\u0E41\u0E17\u0E19 \"".concat(scopeLabel[scope], "\":\n") + "  \u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21 ".concat(currentCount, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u2192 backup ").concat(targetCount, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\n\n") + "\u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E2A\u0E23\u0E49\u0E32\u0E07 backup \u0E02\u0E2D\u0E07 \"\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\" \u0E01\u0E48\u0E2D\u0E19 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49 undo \u0E44\u0E14\u0E49\n" + "Backup \u0E08\u0E32\u0E01: ".concat(new Date(selected.timestamp).toLocaleString('th-TH'));
+    var msg = "\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E01\u0E32\u0E23\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19?\n\n\u0E08\u0E30\u0E41\u0E17\u0E19 \"".concat(scopeLabel[scope], "\":\n") + "  \u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21 ".concat(currentCount, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u2192 backup ").concat(targetCount, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\n\n") + "\u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E30\u0E2A\u0E23\u0E49\u0E32\u0E07 backup \u0E02\u0E2D\u0E07 \"\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\" \u0E01\u0E48\u0E2D\u0E19 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49 undo \u0E44\u0E14\u0E49\n" + "Backup \u0E08\u0E32\u0E01: ".concat(new Date(selected.timestamp).toLocaleString('th-TH-u-ca-gregory'));
     if (!confirm(msg)) return;
     onRestore(selected, scope);
   };
   var fmt = function fmt(ts) {
-    return new Intl.DateTimeFormat('th-TH', {
+    return new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -6354,11 +6354,11 @@ function HistoryRow(_ref57) {
   var StatusIcon = meta.icon;
   var catColor = getCategoryColor(task.category);
   var updated = new Date(task.updatedAt);
-  var timeStr = new Intl.DateTimeFormat('th-TH', {
+  var timeStr = new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
     hour: '2-digit',
     minute: '2-digit'
   }).format(updated);
-  var dateStr = new Intl.DateTimeFormat('th-TH', {
+  var dateStr = new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
     day: 'numeric',
     month: 'short'
   }).format(updated);
