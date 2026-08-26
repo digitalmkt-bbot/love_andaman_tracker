@@ -673,6 +673,17 @@ var Download = function Download(p) {
     }))
   }));
 };
+var Award = function Award(p) {
+  return React.createElement(Icon, _extends({}, p, {
+    paths: React.createElement(React.Fragment, null, React.createElement("circle", {
+      cx: "12",
+      cy: "8",
+      r: "6"
+    }), React.createElement("path", {
+      d: "M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+    }))
+  }));
+};
 var STORAGE_KEY = 'content-tracker-v1';
 var PROJECTS_KEY = 'projects-list-v1';
 var CURRENT_PROJECT_KEY = 'current-project-id-v1';
@@ -2743,6 +2754,11 @@ function App() {
     currentProject: projects.find(function (p) {
       return p.id === currentProjectId;
     })
+  }) : view === 'performance' ? React.createElement(PerformanceDashboard, {
+    posts: projectPosts,
+    tasks: projectTasks,
+    jobs: projectJobs,
+    teamMembers: teamMembers
   }) : view === 'dashboard' ? React.createElement(React.Fragment, null, React.createElement(WelcomeCard, {
     onStart: function onStart() {
       return setView('tasks');
@@ -3036,6 +3052,10 @@ function Sidebar(_ref21) {
     id: 'pr-jobs',
     label: 'Public Relations Jobs',
     icon: Megaphone
+  }, {
+    id: 'performance',
+    label: 'วัดผลรายคน',
+    icon: Award
   }, {
     id: 'history',
     label: 'Work History',
@@ -7479,6 +7499,427 @@ function PostModal(_ref65) {
       backgroundColor: T.navy
     }
   }, post ? 'บันทึก' : 'เพิ่ม Post'))));
+}
+function PerformanceDashboard(_ref66) {
+  var posts = _ref66.posts,
+    tasks = _ref66.tasks,
+    jobs = _ref66.jobs,
+    teamMembers = _ref66.teamMembers;
+  var _useState121 = useState('all'),
+    _useState122 = _slicedToArray(_useState121, 2),
+    range = _useState122[0],
+    setRange = _useState122[1];
+  var _useState123 = useState({
+      posts: true,
+      tasks: true,
+      jobs: true
+    }),
+    _useState124 = _slicedToArray(_useState123, 2),
+    sources = _useState124[0],
+    setSources = _useState124[1];
+  var months = useMemo(function () {
+    var s = new Set();
+    var add = function add(d) {
+      if (d && /^\d{4}-\d{2}/.test(d)) s.add(d.slice(0, 7));
+    };
+    posts.forEach(function (p) {
+      return add(p.date);
+    });
+    tasks.forEach(function (t) {
+      return add(t.deadline);
+    });
+    jobs.forEach(function (j) {
+      return add(j.deadline);
+    });
+    return Array.from(s).sort().reverse();
+  }, [posts, tasks, jobs]);
+  var inRange = function inRange(d) {
+    return range === 'all' ? true : typeof d === 'string' && d.slice(0, 7) === range;
+  };
+  var fPosts = useMemo(function () {
+    return sources.posts ? posts.filter(function (p) {
+      return inRange(p.date);
+    }) : [];
+  }, [posts, range, sources]);
+  var fTasks = useMemo(function () {
+    return sources.tasks ? tasks.filter(function (t) {
+      return inRange(t.deadline);
+    }) : [];
+  }, [tasks, range, sources]);
+  var fJobs = useMemo(function () {
+    return sources.jobs ? jobs.filter(function (j) {
+      return inRange(j.deadline);
+    }) : [];
+  }, [jobs, range, sources]);
+  var people = teamMembers && teamMembers.length ? teamMembers : DEFAULT_TEAM_MEMBERS;
+  var _useMemo = useMemo(function () {
+      var map = {};
+      var un = 0;
+      var ensure = function ensure(name) {
+        if (!map[name]) map[name] = {
+          name: name,
+          posts: 0,
+          pub: 0,
+          inprog: 0,
+          planned: 0,
+          cancelled: 0,
+          channels: {},
+          tasksTotal: 0,
+          tasksDone: 0,
+          tasksOverdue: 0,
+          jobsTotal: 0,
+          jobsDone: 0
+        };
+        return map[name];
+      };
+      people.forEach(function (p) {
+        return ensure(p.name);
+      });
+      fPosts.forEach(function (p) {
+        var ns = getPersons(p);
+        if (ns.length === 0) {
+          un++;
+          return;
+        }
+        ns.forEach(function (n) {
+          var r = ensure(n);
+          r.posts++;
+          if (p.status === 'Published') r.pub++;else if (p.status === 'In Progress') r.inprog++;else if (p.status === 'Planned') r.planned++;else if (p.status === 'Cancelled') r.cancelled++;
+          if (p.channel) r.channels[p.channel] = (r.channels[p.channel] || 0) + 1;
+        });
+      });
+      fTasks.forEach(function (t) {
+        var ns = getPersons(t);
+        if (ns.length === 0) {
+          un++;
+          return;
+        }
+        ns.forEach(function (n) {
+          var r = ensure(n);
+          r.tasksTotal++;
+          var st = getStatus(t);
+          if (st === 'done') r.tasksDone++;else if (st === 'overdue') r.tasksOverdue++;
+        });
+      });
+      fJobs.forEach(function (j) {
+        var ns = getPersons(j);
+        if (ns.length === 0) {
+          un++;
+          return;
+        }
+        ns.forEach(function (n) {
+          var r = ensure(n);
+          r.jobsTotal++;
+          if ((j.progress || 0) >= 100) r.jobsDone++;
+        });
+      });
+      var arr = Object.keys(map).map(function (k) {
+        return map[k];
+      });
+      arr.forEach(function (r) {
+        r.total = r.posts + r.tasksTotal + r.jobsTotal;
+        r.doneScore = r.pub + r.tasksDone + r.jobsDone;
+        var completable = r.pub + r.inprog + r.planned + r.tasksTotal + r.jobsTotal;
+        r.completionRate = completable > 0 ? Math.round(r.doneScore / completable * 100) : 0;
+      });
+      arr.sort(function (a, b) {
+        return b.doneScore - a.doneScore || b.total - a.total;
+      });
+      return {
+        rows: arr,
+        unassigned: un
+      };
+    }, [fPosts, fTasks, fJobs, people]),
+    rows = _useMemo.rows,
+    unassigned = _useMemo.unassigned;
+  var maxScore = Math.max.apply(Math, [1].concat(_toConsumableArray(rows.map(function (r) {
+    return r.doneScore;
+  }))));
+  var totalItems = fPosts.length + fTasks.length + fJobs.length;
+  var monthLabel = function monthLabel(m) {
+    return new Intl.DateTimeFormat('en-GB', {
+      month: 'short',
+      year: 'numeric'
+    }).format(new Date(m + '-01'));
+  };
+  var rankColors = ['#C9A227', '#9AA0A6', '#B08D57'];
+  var activeRows = rows.filter(function (r) {
+    return r.total > 0;
+  });
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "flex items-center justify-between flex-wrap gap-3"
+  }, React.createElement("div", null, React.createElement("h2", {
+    className: "text-2xl md:text-3xl font-bold tracking-tight",
+    style: {
+      color: T.text
+    }
+  }, "// \u0E27\u0E31\u0E14\u0E1C\u0E25\u0E23\u0E32\u0E22\u0E04\u0E19"), React.createElement("p", {
+    className: "text-xs md:text-sm mt-1",
+    style: {
+      color: T.textMuted
+    }
+  }, "\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E41\u0E15\u0E48\u0E25\u0E30\u0E04\u0E19 \xB7 Planning Post + Tracking + PR Jobs \xB7 ", totalItems, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", range === 'all' ? ' (ทั้งหมด)' : ' · ' + monthLabel(range)))), React.createElement("div", {
+    className: "rounded-2xl p-4 flex flex-col gap-3",
+    style: {
+      backgroundColor: T.cardBg,
+      border: '1px solid ' + T.border
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, React.createElement("span", {
+    className: "text-[11px] font-bold uppercase tracking-wider",
+    style: {
+      color: T.textMuted
+    }
+  }, "\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32"), React.createElement("button", {
+    onClick: function onClick() {
+      return setRange('all');
+    },
+    className: "px-3 py-1.5 rounded-full text-xs font-semibold transition",
+    style: {
+      backgroundColor: range === 'all' ? T.navy : T.mainBg,
+      color: range === 'all' ? '#fff' : T.text
+    }
+  }, "\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"), months.map(function (m) {
+    return React.createElement("button", {
+      key: m,
+      onClick: function onClick() {
+        return setRange(m);
+      },
+      className: "px-3 py-1.5 rounded-full text-xs font-semibold transition",
+      style: {
+        backgroundColor: range === m ? T.navy : T.mainBg,
+        color: range === m ? '#fff' : T.text
+      }
+    }, monthLabel(m));
+  })), React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, React.createElement("span", {
+    className: "text-[11px] font-bold uppercase tracking-wider",
+    style: {
+      color: T.textMuted
+    }
+  }, "\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"), [['posts', 'Planning Post'], ['tasks', 'Tracking'], ['jobs', 'PR Jobs']].map(function (pair) {
+    return React.createElement("button", {
+      key: pair[0],
+      onClick: function onClick() {
+        return setSources(function (s) {
+          return _objectSpread(_objectSpread({}, s), {}, _defineProperty({}, pair[0], !s[pair[0]]));
+        });
+      },
+      className: "px-3 py-1.5 rounded-full text-xs font-semibold transition",
+      style: {
+        backgroundColor: sources[pair[0]] ? T.pillTeal : T.mainBg,
+        color: sources[pair[0]] ? '#2E6E4E' : T.textMuted,
+        border: '1px solid ' + (sources[pair[0]] ? '#B7D9C0' : T.border)
+      }
+    }, sources[pair[0]] ? '✓ ' : '', pair[1]);
+  }))), React.createElement("div", {
+    className: "rounded-2xl p-5",
+    style: {
+      backgroundColor: T.cardBg,
+      border: '1px solid ' + T.border
+    }
+  }, React.createElement("div", {
+    className: "text-sm font-bold mb-1",
+    style: {
+      color: T.text
+    }
+  }, "\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E1C\u0E25\u0E07\u0E32\u0E19"), React.createElement("div", {
+    className: "text-[11px] mb-4",
+    style: {
+      color: T.textMuted
+    }
+  }, "\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08 (\u0E42\u0E1E\u0E2A\u0E15\u0E4C Published + Task/Job \u0E40\u0E2A\u0E23\u0E47\u0E08)"), React.createElement("div", {
+    className: "flex flex-col gap-2.5"
+  }, activeRows.length === 0 ? React.createElement("div", {
+    className: "text-center py-8 text-sm",
+    style: {
+      color: T.textMuted
+    }
+  }, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E19\u0E35\u0E49") : activeRows.map(function (r, i) {
+    return React.createElement("div", {
+      key: r.name,
+      className: "flex items-center gap-3"
+    }, React.createElement("div", {
+      className: "w-6 text-center text-xs font-bold",
+      style: {
+        color: i < 3 ? rankColors[i] : T.textMuted
+      }
+    }, i + 1), React.createElement("div", {
+      className: "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0",
+      style: {
+        backgroundColor: getPersonColor(r.name)
+      }
+    }, getInitials(r.name)), React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between mb-1"
+    }, React.createElement("span", {
+      className: "text-xs font-semibold truncate",
+      style: {
+        color: T.text
+      }
+    }, r.name), React.createElement("span", {
+      className: "text-[11px] font-bold",
+      style: {
+        color: T.text
+      }
+    }, r.doneScore, " \u0E40\u0E2A\u0E23\u0E47\u0E08 / ", r.total, " \u0E07\u0E32\u0E19")), React.createElement("div", {
+      className: "h-2 rounded-full overflow-hidden",
+      style: {
+        backgroundColor: T.mainBg
+      }
+    }, React.createElement("div", {
+      className: "h-full rounded-full",
+      style: {
+        width: Math.round(r.doneScore / maxScore * 100) + '%',
+        backgroundColor: getPersonColor(r.name)
+      }
+    }))));
+  })), unassigned > 0 && React.createElement("div", {
+    className: "text-[11px] mt-4 pt-3",
+    style: {
+      color: T.textMuted,
+      borderTop: '1px solid ' + T.border
+    }
+  }, "* \u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1C\u0E39\u0E49\u0E23\u0E31\u0E1A\u0E1C\u0E34\u0E14\u0E0A\u0E2D\u0E1A ", unassigned, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E19\u0E31\u0E1A\u0E43\u0E2B\u0E49\u0E43\u0E04\u0E23)")), React.createElement("div", {
+    className: "grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+  }, rows.map(function (r, i) {
+    return React.createElement("div", {
+      key: r.name,
+      className: "rounded-2xl p-5",
+      style: {
+        backgroundColor: T.cardBg,
+        border: '1px solid ' + T.border
+      }
+    }, React.createElement("div", {
+      className: "flex items-center gap-3 mb-4"
+    }, React.createElement("div", {
+      className: "w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0",
+      style: {
+        backgroundColor: getPersonColor(r.name)
+      }
+    }, getInitials(r.name)), React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, React.createElement("div", {
+      className: "text-sm font-bold truncate",
+      style: {
+        color: T.text
+      }
+    }, r.name), React.createElement("div", {
+      className: "text-[11px]",
+      style: {
+        color: T.textMuted
+      }
+    }, r.total, " \u0E07\u0E32\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")), r.total > 0 && i < 3 && React.createElement("div", {
+      className: "text-[10px] font-bold px-2 py-1 rounded-full",
+      style: {
+        backgroundColor: rankColors[i] + '22',
+        color: rankColors[i]
+      }
+    }, "#", i + 1)), React.createElement("div", {
+      className: "mb-4"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between mb-1"
+    }, React.createElement("span", {
+      className: "text-[11px] font-semibold",
+      style: {
+        color: T.textMuted
+      }
+    }, "\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08"), React.createElement("span", {
+      className: "text-xs font-bold",
+      style: {
+        color: T.text
+      }
+    }, r.completionRate, "%")), React.createElement("div", {
+      className: "h-2 rounded-full overflow-hidden",
+      style: {
+        backgroundColor: T.mainBg
+      }
+    }, React.createElement("div", {
+      className: "h-full rounded-full",
+      style: {
+        width: r.completionRate + '%',
+        backgroundColor: '#2E7A4E'
+      }
+    }))), React.createElement("div", {
+      className: "text-[11px] font-bold uppercase tracking-wider mb-2",
+      style: {
+        color: T.textMuted
+      }
+    }, "Planning Post (", r.posts, ")"), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 mb-3"
+    }, [['Published', r.pub], ['In Progress', r.inprog], ['Planned', r.planned], ['Cancelled', r.cancelled]].map(function (pair) {
+      var meta = POST_STATUSES.find(function (s) {
+        return s.name === pair[0];
+      });
+      return React.createElement("div", {
+        key: pair[0],
+        className: "flex items-center gap-1.5"
+      }, React.createElement("span", {
+        className: "w-2 h-2 rounded-full flex-shrink-0",
+        style: {
+          backgroundColor: meta.color
+        }
+      }), React.createElement("span", {
+        className: "text-[11px] flex-1",
+        style: {
+          color: T.textMuted
+        }
+      }, pair[0]), React.createElement("span", {
+        className: "text-xs font-bold",
+        style: {
+          color: T.text
+        }
+      }, pair[1]));
+    })), Object.keys(r.channels).length > 0 && React.createElement("div", {
+      className: "flex flex-wrap gap-1.5 mb-3"
+    }, Object.keys(r.channels).map(function (ch) {
+      var meta = getChannelMeta(ch);
+      return React.createElement("span", {
+        key: ch,
+        className: "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+        style: {
+          backgroundColor: meta.bg,
+          color: meta.color
+        }
+      }, ch, " ", r.channels[ch]);
+    })), React.createElement("div", {
+      className: "flex items-center gap-4 pt-3",
+      style: {
+        borderTop: '1px solid ' + T.border
+      }
+    }, React.createElement("div", {
+      className: "flex-1"
+    }, React.createElement("div", {
+      className: "text-[10px] uppercase tracking-wider",
+      style: {
+        color: T.textMuted
+      }
+    }, "Tracking"), React.createElement("div", {
+      className: "text-xs font-bold",
+      style: {
+        color: T.text
+      }
+    }, r.tasksDone, "/", r.tasksTotal, " \u0E40\u0E2A\u0E23\u0E47\u0E08", r.tasksOverdue > 0 ? React.createElement("span", {
+      style: {
+        color: '#B0392C'
+      }
+    }, " \xB7 \u0E40\u0E25\u0E22 ", r.tasksOverdue) : '')), React.createElement("div", {
+      className: "flex-1"
+    }, React.createElement("div", {
+      className: "text-[10px] uppercase tracking-wider",
+      style: {
+        color: T.textMuted
+      }
+    }, "PR Jobs"), React.createElement("div", {
+      className: "text-xs font-bold",
+      style: {
+        color: T.text
+      }
+    }, r.jobsDone, "/", r.jobsTotal, " \u0E40\u0E2A\u0E23\u0E47\u0E08"))));
+  })));
 }
 var rootEl = ReactDOM.createRoot(document.getElementById('root'));
 rootEl.render(React.createElement(App, null));
