@@ -7856,52 +7856,42 @@ function PerformanceDashboard(_ref66) {
     style: {
       color: T.textMuted
     }
-  }, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E19\u0E35\u0E49") : React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: Math.max(160, chartData.length * 46)
-  }, React.createElement(BarChart, {
-    data: chartData,
-    layout: "vertical",
-    margin: {
-      top: 4,
-      right: 28,
-      left: 8,
-      bottom: 4
-    }
-  }, React.createElement(XAxis, {
-    type: "number",
-    hide: true
-  }), React.createElement(YAxis, {
-    type: "category",
-    dataKey: "name",
-    width: 72,
-    tick: {
-      fontSize: 12,
-      fill: T.text
-    },
-    axisLine: false,
-    tickLine: false
-  }), React.createElement(Tooltip, {
-    cursor: {
-      fill: T.mainBg
-    },
-    formatter: function formatter(v) {
-      return [v + ' งานเสร็จ', 'ผลงาน'];
-    }
-  }), React.createElement(Bar, {
-    dataKey: "score",
-    radius: [0, 6, 6, 0],
-    label: {
-      position: 'right',
-      fontSize: 11,
-      fill: T.textMuted
-    }
-  }, chartData.map(function (d) {
-    return React.createElement(Cell, {
-      key: d.name,
-      fill: d.fill
+  }, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E19\u0E35\u0E49") : React.createElement("div", {
+    className: "flex flex-col gap-2.5"
+  }, function () {
+    var mx = chartData.reduce(function (m, d) {
+      return Math.max(m, d.score);
+    }, 1);
+    return chartData.map(function (d, i) {
+      return React.createElement("div", {
+        key: d.name,
+        className: "flex items-center gap-3"
+      }, React.createElement("div", {
+        className: "w-6 text-center text-xs font-bold flex-shrink-0",
+        style: {
+          color: i < 3 ? rankColors[i] : T.textMuted
+        }
+      }, i + 1), React.createElement("div", {
+        className: "w-16 text-xs font-semibold truncate flex-shrink-0",
+        style: {
+          color: T.text
+        }
+      }, d.name), React.createElement("div", {
+        className: "flex-1 h-6 rounded-lg overflow-hidden",
+        style: {
+          backgroundColor: T.mainBg
+        }
+      }, React.createElement("div", {
+        className: "h-full rounded-lg flex items-center justify-end px-2 transition-all",
+        style: {
+          width: Math.max(9, Math.round(d.score / mx * 100)) + '%',
+          backgroundColor: d.fill
+        }
+      }, React.createElement("span", {
+        className: "text-[10px] font-bold text-white"
+      }, d.score))));
     });
-  })))), unassigned > 0 && React.createElement("div", {
+  }()), unassigned > 0 && React.createElement("div", {
     className: "text-[11px] mt-2 pt-3",
     style: {
       color: T.textMuted,
