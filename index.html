@@ -289,7 +289,7 @@
   </script>
 
   <!-- Main application -->
-  <!-- login v2: white bg, correct greens, illustration -->
+  <!-- v: report kpi barchart + prelaunch fixes -->
   <script>
 "use strict";
 
@@ -328,7 +328,9 @@ var _Recharts = Recharts,
   XAxis = _Recharts.XAxis,
   YAxis = _Recharts.YAxis,
   Tooltip = _Recharts.Tooltip,
-  ResponsiveContainer = _Recharts.ResponsiveContainer;
+  ResponsiveContainer = _Recharts.ResponsiveContainer,
+  BarChart = _Recharts.BarChart,
+  Bar = _Recharts.Bar;
 var Icon = function Icon(_ref) {
   var paths = _ref.paths,
     _ref$size = _ref.size,
@@ -1190,7 +1192,7 @@ var POST_STATUSES = [{
   bg: '#EFEDE6',
   icon: Ban
 }];
-var POST_TOPICS = ['Promotions Love', 'Hotel Partner', 'Ativity Partner', 'Content Partner', 'Live Activity,Hotel', 'Content เกาะ Love', 'ชวนคุย , Q&A', 'Service Love', 'Clip Tiktok, IG', 'Content Blogger Share', 'Live Promotion Hotel Partner,Ativity Partner', 'Event Phuket', 'Reviews'];
+var POST_TOPICS = ['Content เกาะ Love', 'Content Partner', 'Promotions Love', 'Hotel Partner', 'Activity Partner', 'Blogger / Review', 'ชวนคุย / Q&A', 'Clip TikTok / IG'];
 var POST_FORMATS = [{
   name: 'Single Image',
   color: '#3E5A7A',
@@ -3599,26 +3601,32 @@ function StatsRow(_ref25) {
     dark: true,
     IconCmp: ChipCheck
   }, {
-    label: 'InProgress',
-    value: stats.inProgress,
-    bg: '#F5EFD9',
-    accent: '#8A6A2E',
-    IconCmp: ChipCircle
-  }, {
-    label: 'Pending',
-    value: stats.notStarted + stats.overdue,
-    bg: '#DCE9F5',
-    accent: '#3E6FA0',
-    IconCmp: ChipAlert
-  }, {
     label: 'Completed',
     value: stats.done,
     bg: '#CFE8D4',
     accent: '#2E7A4E',
     IconCmp: ChipCheck
+  }, {
+    label: 'In Progress',
+    value: stats.inProgress,
+    bg: '#F5EFD9',
+    accent: '#8A6A2E',
+    IconCmp: ChipCircle
+  }, {
+    label: 'Not Started',
+    value: stats.notStarted,
+    bg: '#DCE9F5',
+    accent: '#3E6FA0',
+    IconCmp: ChipCircle
+  }, {
+    label: 'Overdue',
+    value: stats.overdue,
+    bg: '#F3DEDA',
+    accent: '#B0392C',
+    IconCmp: ChipAlert
   }];
   return React.createElement("div", {
-    className: "grid grid-cols-2 md:grid-cols-4 gap-4"
+    className: "grid grid-cols-2 md:grid-cols-5 gap-4"
   }, cards.map(function (c) {
     var Ic = c.IconCmp;
     return React.createElement("div", {
@@ -7264,7 +7272,7 @@ function PostModal(_ref65) {
     }
     onSave(_objectSpread(_objectSpread({}, post || {}), {}, {
       channel: channel,
-      day: day,
+      day: date ? dayFromDate(date) : day,
       status: status,
       date: date,
       time: time,
@@ -7349,7 +7357,7 @@ function PostModal(_ref65) {
       size: 12
     }), s.name);
   }))), React.createElement("div", {
-    className: "grid grid-cols-3 gap-3"
+    className: "grid grid-cols-2 gap-3"
   }, React.createElement(Field, {
     label: "Date"
   }, React.createElement("input", {
@@ -7362,7 +7370,12 @@ function PostModal(_ref65) {
     style: {
       borderColor: T.border
     }
-  })), React.createElement(Field, {
+  }), date && React.createElement("div", {
+    className: "text-[11px] mt-1",
+    style: {
+      color: T.textMuted
+    }
+  }, dayFromDate(date))), React.createElement(Field, {
     label: "Time"
   }, React.createElement("input", {
     type: "time",
@@ -7374,23 +7387,7 @@ function PostModal(_ref65) {
     style: {
       borderColor: T.border
     }
-  })), React.createElement(Field, {
-    label: "Day"
-  }, React.createElement("select", {
-    value: day,
-    onChange: function onChange(e) {
-      return setDay(e.target.value);
-    },
-    className: "w-full px-3 py-2 text-sm rounded-lg border bg-white outline-none cursor-pointer",
-    style: {
-      borderColor: T.border
-    }
-  }, DAYS.map(function (d) {
-    return React.createElement("option", {
-      key: d,
-      value: d
-    }, d);
-  })))), React.createElement(Field, {
+  }))), React.createElement(Field, {
     label: "\u0E1C\u0E39\u0E49\u0E23\u0E31\u0E1A\u0E1C\u0E34\u0E14\u0E0A\u0E2D\u0E1A ".concat(persons.length > 0 ? "(".concat(persons.length, " \u0E04\u0E19)") : '— กดเลือกได้หลายคน')
   }, React.createElement("div", {
     className: "flex gap-1.5 flex-wrap"
@@ -7517,6 +7514,9 @@ function PerformanceDashboard(_ref66) {
     _useState124 = _slicedToArray(_useState123, 2),
     sources = _useState124[0],
     setSources = _useState124[1];
+  var TARGET_POSTS = 8;
+  var TARGET_COMPLETION = 80;
+  var TARGET_ONTIME = 90;
   var months = useMemo(function () {
     var s = new Set();
     var add = function add(d) {
@@ -7551,6 +7551,14 @@ function PerformanceDashboard(_ref66) {
       return inRange(j.deadline);
     }) : [];
   }, [jobs, range, sources]);
+  var monthsCount = useMemo(function () {
+    if (range !== 'all') return 1;
+    var s = new Set();
+    fPosts.forEach(function (p) {
+      if (p.date && /^\d{4}-\d{2}/.test(p.date)) s.add(p.date.slice(0, 7));
+    });
+    return Math.max(1, s.size);
+  }, [fPosts, range]);
   var people = teamMembers && teamMembers.length ? teamMembers : DEFAULT_TEAM_MEMBERS;
   var _useMemo = useMemo(function () {
       var map = {};
@@ -7568,13 +7576,16 @@ function PerformanceDashboard(_ref66) {
           tasksDone: 0,
           tasksOverdue: 0,
           jobsTotal: 0,
-          jobsDone: 0
+          jobsDone: 0,
+          jobsOverdue: 0
         };
         return map[name];
       };
       people.forEach(function (p) {
         return ensure(p.name);
       });
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
       fPosts.forEach(function (p) {
         var ns = getPersons(p);
         if (ns.length === 0) {
@@ -7610,7 +7621,8 @@ function PerformanceDashboard(_ref66) {
         ns.forEach(function (n) {
           var r = ensure(n);
           r.jobsTotal++;
-          if ((j.progress || 0) >= 100) r.jobsDone++;
+          var done = (j.progress || 0) >= 100;
+          if (done) r.jobsDone++;else if (j.deadline && new Date(j.deadline) < today) r.jobsOverdue++;
         });
       });
       var arr = Object.keys(map).map(function (k) {
@@ -7621,6 +7633,10 @@ function PerformanceDashboard(_ref66) {
         r.doneScore = r.pub + r.tasksDone + r.jobsDone;
         var completable = r.pub + r.inprog + r.planned + r.tasksTotal + r.jobsTotal;
         r.completionRate = completable > 0 ? Math.round(r.doneScore / completable * 100) : 0;
+        var dl = r.tasksTotal + r.jobsTotal;
+        var od = r.tasksOverdue + r.jobsOverdue;
+        r.onTime = dl > 0 ? Math.round((dl - od) / dl * 100) : 100;
+        r.postsPerMonth = Math.round(r.pub / monthsCount * 10) / 10;
       });
       arr.sort(function (a, b) {
         return b.doneScore - a.doneScore || b.total - a.total;
@@ -7629,12 +7645,33 @@ function PerformanceDashboard(_ref66) {
         rows: arr,
         unassigned: un
       };
-    }, [fPosts, fTasks, fJobs, people]),
+    }, [fPosts, fTasks, fJobs, people, monthsCount]),
     rows = _useMemo.rows,
     unassigned = _useMemo.unassigned;
-  var maxScore = Math.max.apply(Math, [1].concat(_toConsumableArray(rows.map(function (r) {
-    return r.doneScore;
-  }))));
+  var teamTotalWork = rows.reduce(function (s, r) {
+    return s + r.total;
+  }, 0) + unassigned;
+  var teamPub = rows.reduce(function (s, r) {
+    return s + r.pub;
+  }, 0);
+  var teamDoneScore = rows.reduce(function (s, r) {
+    return s + r.doneScore;
+  }, 0);
+  var teamCompletable = rows.reduce(function (s, r) {
+    return s + r.pub + r.inprog + r.planned + r.tasksTotal + r.jobsTotal;
+  }, 0);
+  var teamCompletion = teamCompletable > 0 ? Math.round(teamDoneScore / teamCompletable * 100) : 0;
+  var teamDL = rows.reduce(function (s, r) {
+    return s + r.tasksTotal + r.jobsTotal;
+  }, 0);
+  var teamOD = rows.reduce(function (s, r) {
+    return s + r.tasksOverdue + r.jobsOverdue;
+  }, 0);
+  var teamOnTime = teamDL > 0 ? Math.round((teamDL - teamOD) / teamDL * 100) : 100;
+  var activePeople = rows.filter(function (r) {
+    return r.total > 0;
+  }).length || 1;
+  var avgPostsPerPersonMonth = Math.round(teamPub / (activePeople * monthsCount) * 10) / 10;
   var totalItems = fPosts.length + fTasks.length + fJobs.length;
   var monthLabel = function monthLabel(m) {
     return new Intl.DateTimeFormat('en-GB', {
@@ -7646,6 +7683,59 @@ function PerformanceDashboard(_ref66) {
   var activeRows = rows.filter(function (r) {
     return r.total > 0;
   });
+  var chartData = activeRows.map(function (r) {
+    return {
+      name: r.name,
+      score: r.doneScore,
+      fill: getPersonColor(r.name)
+    };
+  });
+  var pctColor = function pctColor(v, target) {
+    return v >= target ? '#2E7A4E' : v >= target - 15 ? '#B8860B' : '#B0392C';
+  };
+  var ratioColor = function ratioColor(v, target) {
+    return v >= target ? '#2E7A4E' : v >= target * 0.6 ? '#B8860B' : '#B0392C';
+  };
+  var share = function share(r) {
+    return teamTotalWork > 0 ? Math.round(r.total / teamTotalWork * 100) : 0;
+  };
+  var KpiTile = function KpiTile(_ref67) {
+    var label = _ref67.label,
+      value = _ref67.value,
+      unit = _ref67.unit,
+      target = _ref67.target,
+      color = _ref67.color,
+      sub = _ref67.sub;
+    return React.createElement("div", {
+      className: "rounded-2xl p-4",
+      style: {
+        backgroundColor: T.cardBg,
+        border: '1px solid ' + T.border
+      }
+    }, React.createElement("div", {
+      className: "text-[11px] font-semibold uppercase tracking-wider mb-1",
+      style: {
+        color: T.textMuted
+      }
+    }, label), React.createElement("div", {
+      className: "flex items-baseline gap-1"
+    }, React.createElement("span", {
+      className: "text-2xl font-bold",
+      style: {
+        color: color || T.text
+      }
+    }, value), React.createElement("span", {
+      className: "text-xs font-semibold",
+      style: {
+        color: T.textMuted
+      }
+    }, unit)), React.createElement("div", {
+      className: "text-[11px] mt-1",
+      style: {
+        color: T.textMuted
+      }
+    }, target ? 'เป้า ' + target : sub));
+  };
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center justify-between flex-wrap gap-3"
   }, React.createElement("div", null, React.createElement("h2", {
@@ -7658,7 +7748,7 @@ function PerformanceDashboard(_ref66) {
     style: {
       color: T.textMuted
     }
-  }, "\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E41\u0E15\u0E48\u0E25\u0E30\u0E04\u0E19 \xB7 Planning Post + Tracking + PR Jobs \xB7 ", totalItems, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", range === 'all' ? ' (ทั้งหมด)' : ' · ' + monthLabel(range)))), React.createElement("div", {
+  }, "KPI & \u0E1C\u0E25\u0E07\u0E32\u0E19\u0E41\u0E15\u0E48\u0E25\u0E30\u0E04\u0E19 \xB7 Planning Post + Tracking + PR Jobs \xB7 ", totalItems, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", range === 'all' ? ' (ทั้งหมด)' : ' · ' + monthLabel(range)))), React.createElement("div", {
     className: "rounded-2xl p-4 flex flex-col gap-3",
     style: {
       backgroundColor: T.cardBg,
@@ -7714,6 +7804,37 @@ function PerformanceDashboard(_ref66) {
         border: '1px solid ' + (sources[pair[0]] ? '#B7D9C0' : T.border)
       }
     }, sources[pair[0]] ? '✓ ' : '', pair[1]);
+  }))), React.createElement("div", null, React.createElement("div", {
+    className: "text-sm font-bold mb-2",
+    style: {
+      color: T.text
+    }
+  }, "KPI \u0E17\u0E35\u0E21 (\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22)"), React.createElement("div", {
+    className: "grid grid-cols-2 xl:grid-cols-4 gap-3"
+  }, React.createElement(KpiTile, {
+    label: "\u0E42\u0E1E\u0E2A\u0E15\u0E4C\u0E40\u0E1C\u0E22\u0E41\u0E1E\u0E23\u0E48/\u0E04\u0E19/\u0E40\u0E14\u0E37\u0E2D\u0E19",
+    value: avgPostsPerPersonMonth,
+    unit: '/ ' + TARGET_POSTS,
+    target: TARGET_POSTS + ' โพสต์',
+    color: ratioColor(avgPostsPerPersonMonth, TARGET_POSTS)
+  }), React.createElement(KpiTile, {
+    label: "Completion rate (\u0E17\u0E35\u0E21)",
+    value: teamCompletion,
+    unit: "%",
+    target: TARGET_COMPLETION + '%',
+    color: pctColor(teamCompletion, TARGET_COMPLETION)
+  }), React.createElement(KpiTile, {
+    label: "\u0E07\u0E32\u0E19\u0E15\u0E23\u0E07\u0E40\u0E27\u0E25\u0E32 (\u0E17\u0E35\u0E21)",
+    value: teamOnTime,
+    unit: "%",
+    target: TARGET_ONTIME + '%',
+    color: pctColor(teamOnTime, TARGET_ONTIME)
+  }), React.createElement(KpiTile, {
+    label: "\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E23\u0E27\u0E21 (\u0E40\u0E2A\u0E23\u0E47\u0E08)",
+    value: teamDoneScore,
+    unit: '/ ' + teamTotalWork,
+    sub: "\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08",
+    color: T.text
   }))), React.createElement("div", {
     className: "rounded-2xl p-5",
     style: {
@@ -7726,59 +7847,62 @@ function PerformanceDashboard(_ref66) {
       color: T.text
     }
   }, "\u0E2D\u0E31\u0E19\u0E14\u0E31\u0E1A\u0E1C\u0E25\u0E07\u0E32\u0E19"), React.createElement("div", {
-    className: "text-[11px] mb-4",
+    className: "text-[11px] mb-3",
     style: {
       color: T.textMuted
     }
-  }, "\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08 (\u0E42\u0E1E\u0E2A\u0E15\u0E4C Published + Task/Job \u0E40\u0E2A\u0E23\u0E47\u0E08)"), React.createElement("div", {
-    className: "flex flex-col gap-2.5"
-  }, activeRows.length === 0 ? React.createElement("div", {
+  }, "\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08 (\u0E42\u0E1E\u0E2A\u0E15\u0E4C Published + Task/Job \u0E40\u0E2A\u0E23\u0E47\u0E08)"), chartData.length === 0 ? React.createElement("div", {
     className: "text-center py-8 text-sm",
     style: {
       color: T.textMuted
     }
-  }, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E19\u0E35\u0E49") : activeRows.map(function (r, i) {
-    return React.createElement("div", {
-      key: r.name,
-      className: "flex items-center gap-3"
-    }, React.createElement("div", {
-      className: "w-6 text-center text-xs font-bold",
-      style: {
-        color: i < 3 ? rankColors[i] : T.textMuted
-      }
-    }, i + 1), React.createElement("div", {
-      className: "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0",
-      style: {
-        backgroundColor: getPersonColor(r.name)
-      }
-    }, getInitials(r.name)), React.createElement("div", {
-      className: "flex-1 min-w-0"
-    }, React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, React.createElement("span", {
-      className: "text-xs font-semibold truncate",
-      style: {
-        color: T.text
-      }
-    }, r.name), React.createElement("span", {
-      className: "text-[11px] font-bold",
-      style: {
-        color: T.text
-      }
-    }, r.doneScore, " \u0E40\u0E2A\u0E23\u0E47\u0E08 / ", r.total, " \u0E07\u0E32\u0E19")), React.createElement("div", {
-      className: "h-2 rounded-full overflow-hidden",
-      style: {
-        backgroundColor: T.mainBg
-      }
-    }, React.createElement("div", {
-      className: "h-full rounded-full",
-      style: {
-        width: Math.round(r.doneScore / maxScore * 100) + '%',
-        backgroundColor: getPersonColor(r.name)
-      }
-    }))));
-  })), unassigned > 0 && React.createElement("div", {
-    className: "text-[11px] mt-4 pt-3",
+  }, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E19\u0E35\u0E49") : React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: Math.max(160, chartData.length * 46)
+  }, React.createElement(BarChart, {
+    data: chartData,
+    layout: "vertical",
+    margin: {
+      top: 4,
+      right: 28,
+      left: 8,
+      bottom: 4
+    }
+  }, React.createElement(XAxis, {
+    type: "number",
+    hide: true
+  }), React.createElement(YAxis, {
+    type: "category",
+    dataKey: "name",
+    width: 72,
+    tick: {
+      fontSize: 12,
+      fill: T.text
+    },
+    axisLine: false,
+    tickLine: false
+  }), React.createElement(Tooltip, {
+    cursor: {
+      fill: T.mainBg
+    },
+    formatter: function formatter(v) {
+      return [v + ' งานเสร็จ', 'ผลงาน'];
+    }
+  }), React.createElement(Bar, {
+    dataKey: "score",
+    radius: [0, 6, 6, 0],
+    label: {
+      position: 'right',
+      fontSize: 11,
+      fill: T.textMuted
+    }
+  }, chartData.map(function (d) {
+    return React.createElement(Cell, {
+      key: d.name,
+      fill: d.fill
+    });
+  })))), unassigned > 0 && React.createElement("div", {
+    className: "text-[11px] mt-2 pt-3",
     style: {
       color: T.textMuted,
       borderTop: '1px solid ' + T.border
@@ -7812,38 +7936,53 @@ function PerformanceDashboard(_ref66) {
       style: {
         color: T.textMuted
       }
-    }, r.total, " \u0E07\u0E32\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")), r.total > 0 && i < 3 && React.createElement("div", {
+    }, r.total, " \u0E07\u0E32\u0E19 \xB7 ", share(r), "% \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E21")), r.total > 0 && i < 3 && React.createElement("div", {
       className: "text-[10px] font-bold px-2 py-1 rounded-full",
       style: {
         backgroundColor: rankColors[i] + '22',
         color: rankColors[i]
       }
     }, "#", i + 1)), React.createElement("div", {
-      className: "mb-4"
-    }, React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, React.createElement("span", {
-      className: "text-[11px] font-semibold",
-      style: {
-        color: T.textMuted
-      }
-    }, "\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E17\u0E33\u0E40\u0E2A\u0E23\u0E47\u0E08"), React.createElement("span", {
-      className: "text-xs font-bold",
-      style: {
-        color: T.text
-      }
-    }, r.completionRate, "%")), React.createElement("div", {
-      className: "h-2 rounded-full overflow-hidden",
-      style: {
-        backgroundColor: T.mainBg
-      }
-    }, React.createElement("div", {
-      className: "h-full rounded-full",
-      style: {
-        width: r.completionRate + '%',
-        backgroundColor: '#2E7A4E'
-      }
-    }))), React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 mb-4"
+    }, [{
+      l: 'โพสต์/เดือน',
+      v: r.postsPerMonth,
+      c: ratioColor(r.postsPerMonth, TARGET_POSTS),
+      t: TARGET_POSTS
+    }, {
+      l: 'Completion',
+      v: r.completionRate + '%',
+      c: pctColor(r.completionRate, TARGET_COMPLETION),
+      t: TARGET_COMPLETION + '%'
+    }, {
+      l: 'ตรงเวลา',
+      v: r.onTime + '%',
+      c: pctColor(r.onTime, TARGET_ONTIME),
+      t: TARGET_ONTIME + '%'
+    }].map(function (k) {
+      return React.createElement("div", {
+        key: k.l,
+        className: "rounded-xl p-2 text-center",
+        style: {
+          backgroundColor: T.mainBg
+        }
+      }, React.createElement("div", {
+        className: "text-sm font-bold",
+        style: {
+          color: k.c
+        }
+      }, k.v), React.createElement("div", {
+        className: "text-[9px] leading-tight",
+        style: {
+          color: T.textMuted
+        }
+      }, k.l), React.createElement("div", {
+        className: "text-[9px]",
+        style: {
+          color: T.textMuted
+        }
+      }, "\u0E40\u0E1B\u0E49\u0E32 ", k.t));
+    })), React.createElement("div", {
       className: "text-[11px] font-bold uppercase tracking-wider mb-2",
       style: {
         color: T.textMuted
@@ -7918,7 +8057,11 @@ function PerformanceDashboard(_ref66) {
       style: {
         color: T.text
       }
-    }, r.jobsDone, "/", r.jobsTotal, " \u0E40\u0E2A\u0E23\u0E47\u0E08"))));
+    }, r.jobsDone, "/", r.jobsTotal, " \u0E40\u0E2A\u0E23\u0E47\u0E08", r.jobsOverdue > 0 ? React.createElement("span", {
+      style: {
+        color: '#B0392C'
+      }
+    }, " \xB7 \u0E40\u0E25\u0E22 ", r.jobsOverdue) : ''))));
   })));
 }
 var rootEl = ReactDOM.createRoot(document.getElementById('root'));
