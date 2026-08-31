@@ -154,138 +154,134 @@
       throw new Error('Firebase config not set');
     }
 
-    firebase.initializeApp(FIREBASE_CONFIG);
-    const db = firebase.firestore();
-    const docRef = db.collection(DOC_PATH.col).doc(DOC_PATH.doc);
+    /* ===== PostgREST (Railway PostgreSQL) data layer — replaces Firebase ===== */
+    var LA_API = 'https://api-production-cd567.up.railway.app';
+    var LA_CURKEY = 'la_current_project_v1';
+    var JH = { 'Content-Type': 'application/json' };
 
-    // Firebase-backed storage adapter (shape matches Claude's window.storage)
-    window.storage = {
-      async get(key, shared) {
-        // Force server fetch (no cache) to always get latest data
-        const snap = await docRef.get({ source: 'server' });
-        if (!snap.exists) return null;
-        const data = snap.data();
-        return data[key] !== undefined ? { value: data[key] } : null;
-      },
-      async set(key, value, shared) {
-        await docRef.set({ [key]: value, _updatedAt: Date.now() }, { merge: true });
-      },
-    };
+    function laPersons(rec) {
+      if (rec && Array.isArray(rec.persons) && rec.persons.length) return rec.persons.filter(Boolean);
+      if (rec && typeof rec.person === 'string' && rec.person.trim()) return [rec.person.trim()];
+      return [];
+    }
+    function laDate(v) { return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) ? v.slice(0, 10) : null; }
 
-    // Real-time updates: dispatch event when remote changes arrive
-    let _lastLocalSet = 0;
-    const origSet = window.storage.set;
-    window.storage.set = async function (key, value, shared) {
-      _lastLocalSet = Date.now();
-      return origSet.call(window.storage, key, value, shared);
-    };
-    docRef.onSnapshot((snap) => {
-      if (!snap.exists) return;
-      const ts = (snap.data() && snap.data()._updatedAt) || 0;
-      // Only notify if update came from elsewhere (> 1.5s after our local set)
-      if (ts > _lastLocalSet + 1500) {
-        window.dispatchEvent(new Event('remote-update'));
-      }
-    }, (err) => console.warn('Firestore snapshot error:', err));
+    function taskFromApi(o) { return { id: o.id, projectId: o.project_id, title: o.title || '', category: o.category || '', persons: o.persons || [], person: (o.persons && o.persons[0]) || '', deadline: o.deadline || '', progress: o.progress || 0, notes: o.notes || '', link: o.link || '', createdAt: o.created_at, updatedAt: o.updated_at }; }
+    function postFromApi(o) { return { id: o.id, projectId: o.project_id, channel: o.channel || '', day: o.day || '', status: o.status || '', date: o.post_date || '', time: o.post_time || '', topicType: o.topic_type || '', copy: o.copy || '', format: o.format || '', persons: o.persons || [], person: (o.persons && o.persons[0]) || '', link: o.link || '', createdAt: o.created_at, updatedAt: o.updated_at }; }
+    function jobFromApi(o) { return { id: o.id, projectId: o.project_id, title: o.title || '', category: o.category || '', status: o.status || '', persons: o.persons || [], person: (o.persons && o.persons[0]) || '', deadline: o.deadline || '', progress: o.progress || 0, notes: o.notes || '', link: o.link || '', createdAt: o.created_at, updatedAt: o.updated_at }; }
 
-    // ===== Per-record data layer in the existing 'state' doc (no rules change needed) =====
-    // Each record is its own nested-map field (T/P/J). Writes use field-level merge,
-    // so concurrent edits to different records never overwrite each other.
+    function taskToApi(r) { return { id: r.id, project_id: r.projectId || 'p_default', title: r.title || '', category: r.category || null, persons: laPersons(r), deadline: laDate(r.deadline), progress: r.progress || 0, notes: r.notes || null, link: r.link || null, updated_at: new Date().toISOString() }; }
+    function postToApi(r) { return { id: r.id, project_id: r.projectId || 'p_default', channel: r.channel || null, day: r.day || null, status: r.status || null, post_date: laDate(r.date), post_time: r.time || null, topic_type: r.topicType || null, copy: r.copy || null, format: r.format || null, persons: laPersons(r), link: r.link || null, updated_at: new Date().toISOString() }; }
+    function jobToApi(r) { return { id: r.id, project_id: r.projectId || 'p_default', title: r.title || r.copy || '', category: r.category || null, status: r.status || null, persons: laPersons(r), deadline: laDate(r.deadline), progress: r.progress || 0, notes: r.notes || null, link: r.link || null, updated_at: new Date().toISOString() }; }
+
+    var LA_TBL = { T: { path: 'tasks', to: taskToApi, from: taskFromApi }, P: { path: 'posts', to: postToApi, from: postFromApi }, J: { path: 'jobs', to: jobToApi, from: jobFromApi } };
+
+    function laUpsert(table, rows) {
+      return fetch(LA_API + '/' + table + '?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) })
+        .then(function (r) { if (!r.ok) throw new Error(table + ' upsert ' + r.status); });
+    }
+    function laPatch(table, id, body) {
+      return fetch(LA_API + '/' + table + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(body) })
+        .then(function (r) { if (!r.ok) throw new Error('patch ' + r.status); });
+    }
+
+    var _laCb = null, _laSig = '', _laTimer = null;
+    function laFetchAll() {
+      var q = '?deleted=is.false&order=updated_at.desc';
+      return Promise.all([
+        fetch(LA_API + '/tasks' + q).then(function (r) { return r.json(); }),
+        fetch(LA_API + '/posts' + q).then(function (r) { return r.json(); }),
+        fetch(LA_API + '/jobs' + q).then(function (r) { return r.json(); }),
+        fetch(LA_API + '/projects?order=created_at').then(function (r) { return r.json(); }),
+        fetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
+      ]).then(function (res) {
+        var cur = null; try { cur = localStorage.getItem(LA_CURKEY) || null; } catch (e) {}
+        return {
+          tasks: res[0].map(taskFromApi),
+          posts: res[1].map(postFromApi),
+          jobs: res[2].map(jobFromApi),
+          projects: (res[3] && res[3].length) ? res[3].map(function (p) { return { id: p.id, name: p.name, color: p.color }; }) : null,
+          team: (res[4] && res[4].length) ? res[4].map(function (t) { return { name: t.name, color: t.color }; }) : null,
+          currentProjectId: cur,
+          _exists: true
+        };
+      });
+    }
+    function laPoll(force) {
+      return laFetchAll().then(function (st) {
+        var sig = JSON.stringify([st.tasks, st.posts, st.jobs, st.projects, st.team, st.currentProjectId]);
+        if (force || sig !== _laSig) { _laSig = sig; if (_laCb) _laCb(st); }
+      }).catch(function (e) { console.warn('poll error', e); });
+    }
+
     window.fb = {
-      subscribeState(cb) {
-        return docRef.onSnapshot((snap) => {
-          const d = snap.exists ? (snap.data() || {}) : {};
-          const vals = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? Object.keys(m).map((k) => m[k]).filter((o) => o && !o._deleted) : [];
-          cb({
-            tasks: vals(d.T),
-            posts: vals(d.P),
-            jobs: vals(d.J),
-            projects: Array.isArray(d.projectsV2) && d.projectsV2.length ? d.projectsV2 : null,
-            currentProjectId: d.currentProjectV2 || null,
-            team: Array.isArray(d.teamV2) ? d.teamV2 : null,
-            _exists: snap.exists,
-          });
-        }, (err) => console.warn('state snapshot error:', err));
+      subscribeState: function (cb) {
+        _laCb = cb; laPoll(true);
+        if (_laTimer) clearInterval(_laTimer);
+        _laTimer = setInterval(function () { laPoll(false); }, 15000);
+        return function () { if (_laTimer) clearInterval(_laTimer); _laCb = null; };
       },
-      putRecord(field, id, obj) {
-        const u = { _updatedAt: Date.now() }; u[field] = {}; u[field][id] = obj;
-        return docRef.set(u, { merge: true });
+      putRecord: function (field, id, obj) {
+        var t = LA_TBL[field]; var rec = Object.assign({}, obj, { id: id });
+        return laUpsert(t.path, [t.to(rec)]).then(function () { return laPoll(true); });
       },
-      patchRecord(field, id, partial) {
-        const u = { _updatedAt: Date.now() }; u[field] = {}; u[field][id] = partial;
-        return docRef.set(u, { merge: true });
+      patchRecord: function (field, id, partial) {
+        var t = LA_TBL[field]; var body = {};
+        if (partial._deleted) body.deleted = true;
+        if ('progress' in partial) body.progress = partial.progress;
+        body.updated_at = new Date().toISOString();
+        return laPatch(t.path, id, body).then(function () { return laPoll(true); });
       },
-      delRecord(field, id) {
-        const u = { _updatedAt: Date.now() };
-        u[field + '.' + id] = firebase.firestore.FieldValue.delete();
-        return docRef.update(u);
+      delRecord: function (field, id) {
+        var t = LA_TBL[field];
+        return laPatch(t.path, id, { deleted: true, updated_at: new Date().toISOString() }).then(function () { return laPoll(true); });
       },
-      deleteFields(paths, meta) {
-        const u = { _updatedAt: Date.now() };
-        (paths || []).forEach((p) => { u[p] = firebase.firestore.FieldValue.delete(); });
-        if (meta) { const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' }; Object.keys(meta).forEach((k) => { u[map[k] || k] = meta[k]; }); }
-        return docRef.update(u);
+      deleteFields: function (paths, meta) {
+        var self = this; var chain = Promise.resolve();
+        (paths || []).forEach(function (p) { var s = p.split('.'); var t = LA_TBL[s[0]]; if (t) chain = chain.then(function () { return laPatch(t.path, s[1], { deleted: true }); }); });
+        return chain.then(function () { return meta ? self.setMeta(meta) : null; }).then(function () { return laPoll(true); });
       },
-      softDeleteFields(items, meta) {
-        const u = { _updatedAt: Date.now() };
-        (items || []).forEach((it) => { u[it.field] = u[it.field] || {}; u[it.field][it.id] = { _deleted: true, _deletedAt: new Date().toISOString() }; });
-        if (meta) { const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' }; Object.keys(meta).forEach((k) => { u[map[k] || k] = meta[k]; }); }
-        return docRef.set(u, { merge: true });
+      softDeleteFields: function (items, meta) {
+        var self = this; var chain = Promise.resolve();
+        (items || []).forEach(function (it) { var t = LA_TBL[it.field]; if (t) chain = chain.then(function () { return laPatch(t.path, it.id, { deleted: true, updated_at: new Date().toISOString() }); }); });
+        return chain.then(function () { return meta ? self.setMeta(meta) : null; }).then(function () { return laPoll(true); });
       },
-      setMeta(obj) {
-        const map = { projects: 'projectsV2', currentProjectId: 'currentProjectV2', team: 'teamV2' };
-        const u = { _updatedAt: Date.now() };
-        Object.keys(obj).forEach((k) => { u[map[k] || k] = obj[k]; });
-        return docRef.set(u, { merge: true });
+      setMeta: function (obj) {
+        var chain = Promise.resolve();
+        if (obj.projects) {
+          var pIds = obj.projects.map(function (p) { return '"' + p.id + '"'; }).join(',');
+          chain = chain
+            .then(function () { return fetch(LA_API + '/projects?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.projects.map(function (p) { return { id: p.id, name: p.name, color: p.color || '#1A1A1A' }; })) }); })
+            .then(function () { if (obj.projects.length) return fetch(LA_API + '/projects?id=not.in.(' + pIds + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
+            .catch(function (e) { console.warn('projects meta', e); });
+        }
+        if (obj.team) {
+          var tNames = obj.team.map(function (t) { return '"' + t.name + '"'; }).join(',');
+          chain = chain
+            .then(function () { return fetch(LA_API + '/team_members?on_conflict=name', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.team.map(function (t) { return { name: t.name, color: t.color || null }; })) }); })
+            .then(function () { if (obj.team.length) return fetch(LA_API + '/team_members?name=not.in.(' + tNames + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
+            .catch(function (e) { console.warn('team meta', e); });
+        }
+        if ('currentProjectId' in obj) { try { localStorage.setItem(LA_CURKEY, obj.currentProjectId || ''); } catch (e) {} }
+        return chain.then(function () { return laPoll(true); });
       },
-      bulkSet(field, map) { const u = { _updatedAt: Date.now() }; u[field] = map; return docRef.set(u, { merge: true }); },
-      raw: docRef,
+      bulkSet: function (field, map) {
+        var t = LA_TBL[field]; var rows = Object.keys(map).map(function (k) { return t.to(Object.assign({}, map[k], { id: k })); });
+        return (rows.length ? laUpsert(t.path, rows) : Promise.resolve()).then(function () { return laPoll(true); });
+      },
+      raw: null,
+      _refresh: function () { return laPoll(true); }
     };
 
-    // ===== Automatic daily rotating backups (keeps last 14; runs on load) =====
-    window.ensureDailyBackup = async function () {
-      try {
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); // YYYY-MM-DD
-        const col = db.collection(DOC_PATH.col);
-        const bref = col.doc('backup_auto_' + today);
-        const exists = await bref.get();
-        if (!exists.exists) {
-          const cur = await docRef.get({ source: 'server' });
-          if (cur.exists) {
-            await bref.set(Object.assign({}, cur.data(), { _autoBackup: true, _backupDate: today, _backupAt: Date.now() }));
-          }
-        }
-        // hourly rolling snapshot (bounds worst-case loss to ~1h)
-        const latestRef = col.doc('backup_latest');
-        const lr = await latestRef.get();
-        const lastAt = lr.exists ? (lr.data()._backupAt || 0) : 0;
-        if (Date.now() - lastAt > 900000) {
-          const cur2 = await docRef.get({ source: 'server' });
-          if (cur2.exists) await latestRef.set(Object.assign({}, cur2.data(), { _autoBackup: true, _backupKind: 'latest', _backupAt: Date.now() }));
-        }
-        // prune: keep newest 14 auto-backups
-        const snap = await col.get();
-        const backups = [];
-        snap.forEach((d) => { if (d.id.indexOf('backup_auto_') === 0) backups.push(d.id); });
-        backups.sort();
-        for (let i = 0; i < backups.length - 14; i++) { try { await col.doc(backups[i]).delete(); } catch (e) {} }
-      } catch (e) { console.warn('auto-backup error:', e); }
+    /* storage shim (localStorage-backed; legacy) */
+    window.storage = {
+      get: function (key) { try { var v = localStorage.getItem('la_kv_' + key); return v == null ? null : { value: JSON.parse(v) }; } catch (e) { return null; } },
+      set: function (key, value) { try { localStorage.setItem('la_kv_' + key, JSON.stringify(value)); } catch (e) {} return Promise.resolve(); }
     };
-    setTimeout(function () { window.ensureDailyBackup(); }, 2500);
-    // Lightweight 15-minute rolling snapshot (bounds worst-case loss to ~15 min while app is open)
-    window.snapshotLatest = async function () {
-      try {
-        const col = db.collection(DOC_PATH.col);
-        const latestRef = col.doc('backup_latest');
-        const lr = await latestRef.get();
-        const lastAt = lr.exists ? (lr.data()._backupAt || 0) : 0;
-        if (Date.now() - lastAt > 900000) {
-          const cur = await docRef.get({ source: 'server' });
-          if (cur.exists) await latestRef.set(Object.assign({}, cur.data(), { _autoBackup: true, _backupKind: 'latest', _backupAt: Date.now() }));
-        }
-      } catch (e) { console.warn('snapshotLatest error:', e); }
-    };
-    setInterval(function () { window.snapshotLatest(); }, 900000);
+
+    /* Backups: PostgreSQL on a Railway persistent volume is the source of durability. */
+    window.ensureDailyBackup = function () {};
+    window.snapshotLatest = function () {};
   </script>
 
   <!-- Main application -->
