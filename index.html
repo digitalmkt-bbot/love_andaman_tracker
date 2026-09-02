@@ -21,6 +21,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
+  <!-- ระบบล็อกอิน — ต้องโหลดก่อนโค้ดหลัก -->
+  <script src="login.js"></script>
+
   <style>
     body { font-family: "Plus Jakarta Sans", "IBM Plex Sans Thai", system-ui, sans-serif; background: #F5F3EE; color: #1A1A1A; }
     h1,h2,h3,h4 { font-family: 'Poppins','IBM Plex Sans Thai',sans-serif; letter-spacing:-0.01em; }
@@ -155,9 +158,9 @@
     }
 
     /* ===== PostgREST (Railway PostgreSQL) data layer — replaces Firebase ===== */
-    var LA_API = 'https://api-production-cd567.up.railway.app';
-    var LA_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoid2VidXNlciJ9.B8ktPPstVMX8-Je_0iV3AxUkSF1D50gcK8VG6uP2Brg';
-    function laFetch(u,o){o=o||{};o.headers=Object.assign({'Authorization':'Bearer '+LA_JWT},o.headers||{});return fetch(u,o);}
+    var LA_API = (window.LA_CONFIG && window.LA_CONFIG.api) || 'https://api-clone-task.up.railway.app';
+    /* token มาจากการล็อกอินเท่านั้น (login.js) */
+    function laFetch(u,o){o=o||{};o.headers=Object.assign({'Authorization':'Bearer '+(window.laToken?window.laToken():'')},o.headers||{});return fetch(u,o).then(function(r){if(r.status===401){localStorage.removeItem('la_session');location.reload();}return r;});}
     var LA_CURKEY = 'la_current_project_v1';
     var JH = { 'Content-Type': 'application/json' };
 
