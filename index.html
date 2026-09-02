@@ -156,6 +156,8 @@
 
     /* ===== PostgREST (Railway PostgreSQL) data layer — replaces Firebase ===== */
     var LA_API = 'https://api-production-cd567.up.railway.app';
+    var LA_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoid2VidXNlciJ9.B8ktPPstVMX8-Je_0iV3AxUkSF1D50gcK8VG6uP2Brg';
+    function laFetch(u,o){o=o||{};o.headers=Object.assign({'Authorization':'Bearer '+LA_JWT},o.headers||{});return fetch(u,o);}
     var LA_CURKEY = 'la_current_project_v1';
     var JH = { 'Content-Type': 'application/json' };
 
@@ -177,11 +179,11 @@
     var LA_TBL = { T: { path: 'tasks', to: taskToApi, from: taskFromApi }, P: { path: 'posts', to: postToApi, from: postFromApi }, J: { path: 'jobs', to: jobToApi, from: jobFromApi } };
 
     function laUpsert(table, rows) {
-      return fetch(LA_API + '/' + table + '?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) })
+      return laFetch(LA_API + '/' + table + '?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) })
         .then(function (r) { if (!r.ok) throw new Error(table + ' upsert ' + r.status); });
     }
     function laPatch(table, id, body) {
-      return fetch(LA_API + '/' + table + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(body) })
+      return laFetch(LA_API + '/' + table + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(body) })
         .then(function (r) { if (!r.ok) throw new Error('patch ' + r.status); });
     }
 
@@ -189,11 +191,11 @@
     function laFetchAll() {
       var q = '?deleted=is.false&order=updated_at.desc';
       return Promise.all([
-        fetch(LA_API + '/tasks' + q).then(function (r) { return r.json(); }),
-        fetch(LA_API + '/posts' + q).then(function (r) { return r.json(); }),
-        fetch(LA_API + '/jobs' + q).then(function (r) { return r.json(); }),
-        fetch(LA_API + '/projects?order=created_at').then(function (r) { return r.json(); }),
-        fetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
+        laFetch(LA_API + '/tasks' + q).then(function (r) { return r.json(); }),
+        laFetch(LA_API + '/posts' + q).then(function (r) { return r.json(); }),
+        laFetch(LA_API + '/jobs' + q).then(function (r) { return r.json(); }),
+        laFetch(LA_API + '/projects?order=created_at').then(function (r) { return r.json(); }),
+        laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
       ]).then(function (res) {
         var cur = null; try { cur = localStorage.getItem(LA_CURKEY) || null; } catch (e) {}
         return {
@@ -251,15 +253,15 @@
         if (obj.projects) {
           var pIds = obj.projects.map(function (p) { return '"' + p.id + '"'; }).join(',');
           chain = chain
-            .then(function () { return fetch(LA_API + '/projects?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.projects.map(function (p) { return { id: p.id, name: p.name, color: p.color || '#1A1A1A' }; })) }); })
-            .then(function () { if (obj.projects.length) return fetch(LA_API + '/projects?id=not.in.(' + pIds + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
+            .then(function () { return laFetch(LA_API + '/projects?on_conflict=id', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.projects.map(function (p) { return { id: p.id, name: p.name, color: p.color || '#1A1A1A' }; })) }); })
+            .then(function () { if (obj.projects.length) return laFetch(LA_API + '/projects?id=not.in.(' + pIds + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
             .catch(function (e) { console.warn('projects meta', e); });
         }
         if (obj.team) {
           var tNames = obj.team.map(function (t) { return '"' + t.name + '"'; }).join(',');
           chain = chain
-            .then(function () { return fetch(LA_API + '/team_members?on_conflict=name', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.team.map(function (t) { return { name: t.name, color: t.color || null }; })) }); })
-            .then(function () { if (obj.team.length) return fetch(LA_API + '/team_members?name=not.in.(' + tNames + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
+            .then(function () { return laFetch(LA_API + '/team_members?on_conflict=name', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(obj.team.map(function (t) { return { name: t.name, color: t.color || null }; })) }); })
+            .then(function () { if (obj.team.length) return laFetch(LA_API + '/team_members?name=not.in.(' + tNames + ')', { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } }); })
             .catch(function (e) { console.warn('team meta', e); });
         }
         if ('currentProjectId' in obj) { try { localStorage.setItem(LA_CURKEY, obj.currentProjectId || ''); } catch (e) {} }
