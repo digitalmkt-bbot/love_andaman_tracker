@@ -83,7 +83,7 @@ const DUMMY = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 function signToken(u) {
   return jwt.sign({
-    role:      'app_user',      // ← PostgREST สวมบทบาทนี้
+      role:      'webuser',       // ← ต้องตรงกับ role ใน Postgres
     org_id:    u.org_id,        // ← RLS ใช้ค่านี้กรองข้อมูล
     user_id:   u.id,
     username:  u.username,
