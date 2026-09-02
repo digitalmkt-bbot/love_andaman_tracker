@@ -220,8 +220,18 @@
       subscribeState: function (cb) {
         _laCb = cb; laPoll(true);
         if (_laTimer) clearInterval(_laTimer);
-        _laTimer = setInterval(function () { laPoll(false); }, 15000);
-        return function () { if (_laTimer) clearInterval(_laTimer); _laCb = null; };
+        _laTimer = setInterval(function () { laPoll(false); }, 30000);
+        try {
+          if (window.__laSSE) window.__laSSE.close();
+          var es = new EventSource('https://realtime-production-b762.up.railway.app/events');
+          var deb = null;
+          es.onmessage = function () { if (deb) clearTimeout(deb); deb = setTimeout(function () { laPoll(true); }, 250); };
+          window.__laSSE = es;
+        } catch (e) { console.warn('SSE init', e); }
+        try {
+          if (!window.__laFocusHook) { window.__laFocusHook = true; document.addEventListener('visibilitychange', function () { if (!document.hidden) laPoll(false); }); }
+        } catch (e) {}
+        return function () { if (_laTimer) clearInterval(_laTimer); try { window.__laSSE && window.__laSSE.close(); } catch (e) {} _laCb = null; };
       },
       putRecord: function (field, id, obj) {
         var t = LA_TBL[field]; var rec = Object.assign({}, obj, { id: id });
