@@ -453,6 +453,14 @@
       if (s && s.label) s.label = tr(s.label);
    });
    if (window.CATEGORIES) window.CATEGORIES.forEach(function (c) { if (c && c.name) c.name = tr(c.name); });
+
+   // หน่วยเวลาไทย "น." — ถูกส่งมาแยกจากตัวเลขเวลา ต้องจัดการแยก
+   var prevTr2 = tr;
+   tr = function (s) {
+      if (LANG === 'en' && typeof s === 'string' && s.trim() === 'น.') return '';
+      return prevTr2(s);
+   };
+   
    
    
    
