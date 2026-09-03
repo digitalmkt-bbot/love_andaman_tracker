@@ -122,6 +122,58 @@
                              e('span', { className: 'text-[13px] font-bold', style: { color: INK } }, d.value));
                  })));
    };
+
+   // ===== 6. จับคู่สีเก่าทั้งระบบเข้ากับชุดสี Ref =====
+   // แก้ที่ต้นทาง — CATEGORIES / STATUS_META / TEAM_COLOR_PALETTE เป็น global
+   // จึงมีผลกับทุกหน้าพร้อมกัน
+   var COLOR_MAP = {
+      '#3A3A34': '#6366F1', '#8A6A2E': '#F59E0B', '#3E5AA0': '#4A95F6', '#2E6E8A': '#0EA5E9',
+      '#2E7A4E': '#2BD4B7', '#3E5A7A': '#6B73EB', '#5A4A6A': '#A78BFA', '#B0392C': '#BE123C',
+      '#EFEDE6': '#EEF2FF', '#EAE7DE': '#E0E7FF', '#B0AEA4': '#94A3B8', '#8A8A80': '#64748B',
+      '#DCE6F1': '#E0E7FF', '#DDEAE1': '#D1FAE5', '#F5EFC9': '#E0E7FF', '#EFE7D6': '#FEF3C7',
+      '#CFE8D4': '#D1FAE5', '#F5EFD9': '#FEF3C7', '#F3DEDA': '#FFE4E6', '#DCE9F5': '#E0E7FF'
+   };
+   function mapColor(c) { return COLOR_MAP[String(c || '').toUpperCase()] || c; }
+   if (window.CATEGORIES) window.CATEGORIES.forEach(function (c) { c.color = mapColor(c.color); });
+   if (window.STATUS_META) Object.keys(window.STATUS_META).forEach(function (k) {
+      var s = window.STATUS_META[k];
+      if (s.color) s.color = mapColor(s.color);
+      if (s.bg) s.bg = mapColor(s.bg);
+   });
+   if (window.TEAM_COLOR_PALETTE) for (var i = 0; i < window.TEAM_COLOR_PALETTE.length; i++) {
+      window.TEAM_COLOR_PALETTE[i] = mapColor(window.TEAM_COLOR_PALETTE[i]);
+   }
+
+   // ===== 7. โลโก้ดอกไม้ตาม Ref แทนชื่อทีมมุมซ้ายบน =====
+   var LOGO_SVG = '<svg viewBox="0 0 100 100" style="width:38px;height:38px;display:block">'
+   + '<circle cx="50" cy="30" r="18" fill="#8B5CF6" opacity=".9"/>'
+   + '<circle cx="70" cy="45" r="18" fill="#EC4899" opacity=".9"/>'
+   + '<circle cx="62" cy="70" r="18" fill="#3B82F6" opacity=".9"/>'
+   + '<circle cx="38" cy="70" r="18" fill="#06B6D4" opacity=".9"/>'
+   + '<circle cx="30" cy="45" r="18" fill="#A855F7" opacity=".9"/>'
+   + '<circle cx="50" cy="50" r="12" fill="#EDE9FE"/></svg>';
+
+   function applyLogo() {
+      var hosts = document.querySelectorAll('div.flex.items-center');
+      for (var i = 0; i < hosts.length; i++) {
+         var d = hosts[i];
+         if (d.dataset.laLogo) continue;
+         var t = d.textContent || '';
+         if (t.length < 40 && /Team/.test(t) && d.children.length <= 3) {
+            d.dataset.laLogo = '1';
+            d.innerHTML = LOGO_SVG;
+            return true;
+         }
+      }
+      return false;
+   }
+   // React วาดใหม่แล้วโลโก้จะหาย จึงต้องเฝ้าและใส่ซ้ำ
+   applyLogo();
+   try {
+      var mo = new MutationObserver(function () { applyLogo(); });
+      mo.observe(document.body, { childList: true, subtree: true });
+   } catch (err) {}
+   
    
 
 })();
