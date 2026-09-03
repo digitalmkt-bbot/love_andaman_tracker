@@ -850,7 +850,67 @@
          };
          React.__laPhotoHook = true;
       }
-      
+
+
+   // ===== 20. ตัวเลือกรูปรุ่นแก้ — บอกสาเหตุทุกกรณีที่ล้มเหลว =====
+   // ตัวเดิมไม่มี onerror ถ้าเบราว์เซอร์อ่านไฟล์ไม่ได้ (เช่น HEIC จาก iPhone) จะเงียบสนิท
+   window.__laPickAvatar = function (name) {
+      var id = window.__laAvatars['#id:' + name];
+      if (!id) { alert('ยังไม่พบสมาชิกนี้ กดบันทึกก่อน'); return; }
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/jpeg,image/png,image/webp';
+      inp.onchange = function () {
+         var f = inp.files && inp.files[0];
+         if (!f) return;
+         var nameLower = (f.name || '').toLowerCase();
+         if (/\.(heic|heif)$/.test(nameLower)) {
+            alert('ไฟล์ HEIC จาก iPhone เปิดในเบราว์เซอร์ไม่ได้\n\nวิธีแก้ — เปิดรูปในแอป Photos กดแชร์ → Save to Files หรือตั้งกล้องเป็น Most Compatible');
+            return;
+         }
+         var url0 = URL.createObjectURL(f);
+         var img = new Image();
+         img.onerror = function () {
+            URL.revokeObjectURL(url0);
+            alert('เปิดไฟล์นี้ไม่ได้ (' + (f.type || 'ไม่ทราบชนิด') + ')\n\nรองรับ JPG PNG และ WEBP เท่านั้น');
+         };
+         img.onload = function () {
+            try {
+               var c = document.createElement('canvas');
+               c.width = 128; c.height = 128;
+               var g = c.getContext('2d');
+               var s = Math.min(img.width, img.height);
+               g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
+               var url = c.toDataURL('image/jpeg', 0.82);
+               URL.revokeObjectURL(url0);
+               if (url.length > 60000) { alert('รูปใหญ่เกินไป ลองรูปอื่น'); return; }
+               saveAvatar(name, id, url);
+            } catch (err) {
+               alert('ย่อรูปไม่สำเร็จ: ' + err.message);
+            }
+         };
+         img.src = url0;
+      };
+      inp.click();
+   };
+
+   function saveAvatar(name, id, url) {
+      fetch(window.LA_CONFIG.api + '/team_members?id=eq.' + id, {
+         method: 'PATCH',
+         headers: { Authorization: 'Bearer ' + window.laToken(), 'Content-Type': 'application/json' },
+         body: JSON.stringify({ avatar: url })
+      })
+      .then(function (r) {
+         if (!r.ok) { return r.text().then(function (t) { throw new Error(r.status + ' ' + t.slice(0, 120)); }); }
+         window.__laAvatars[name] = url;
+         forceRepaint();
+         alert('บันทึกรูปของ ' + name + ' แล้ว');
+      })
+      .catch(function (err) {
+         alert('บันทึกไม่สำเร็จ\n\n' + err.message);
+      });
+   }
+   
       // (วงเล็บปิดถูกย้ายขึ้นไปปิด addPhotoButtons ด้านบนแล้ว)
       // ปิดตัวเดิมทิ้ง — ใช้ส่วนที่ 19 ที่สร้างปุ่มผ่าน React แทน
    
