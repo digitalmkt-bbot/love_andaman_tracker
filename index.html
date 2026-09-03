@@ -25,7 +25,7 @@
   <script src="login.js"></script>
 
   <style>
-    body { font-family: "Plus Jakarta Sans", "IBM Plex Sans Thai", system-ui, sans-serif; background: #F5F3EE; color: #1A1A1A; }
+    body { font-family: "Plus Jakarta Sans", "IBM Plex Sans Thai", system-ui, sans-serif; background: #F2F4FA; color: #1A1A1A; }
     h1,h2,h3,h4 { font-family: 'Poppins','IBM Plex Sans Thai',sans-serif; letter-spacing:-0.01em; }
     .boot { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 24px; }
     .spinner { width: 28px; height: 28px; border: 3px solid #EAE7DE; border-top-color: #1A1A1A; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -51,6 +51,7 @@ button,a[role="button"]{min-height:40px}
 .grid.grid-cols-7{font-size:11px}}
 @media print{nav,button,[role="tablist"]{display:none !important}body{background:#fff !important}}
   </style>
+  <style id="la-ref-theme">.rounded-3xl{border-radius:28px}.rounded-2xl{border-radius:20px}</style>
 </head>
 <body>
   <div id="root">
@@ -1039,24 +1040,24 @@ var dayFromDate = function dayFromDate(dateStr) {
   return DAYS[(idx + 6) % 7];
 };
 var T = {
-  sidebarBg: '#E8ECEF',
-  sidebarHover: '#F5F7F8',
-  sidebarActive: '#F5EFC9',
-  sidebarText: '#8A8A80',
-  sidebarTitle: '#1A1A1A',
-  mainBg: '#EEF1F3',
-  rightPanelBg: '#F3F5F7',
+  sidebarBg: '#FFFFFF',
+  sidebarHover: '#EEF2FF',
+  sidebarActive: '#E0E7FF',
+  sidebarText: '#94A3B8',
+  sidebarTitle: '#0F1720',
+  mainBg: '#F2F4FA',
+  rightPanelBg: '#FFFFFF',
   cardBg: '#FFFFFF',
-  border: '#E4E9EE',
-  text: '#1A1A1A',
-  textMuted: '#8A8A80',
-  navy: '#1A1A1A',
-  navyDeep: '#000000',
-  cyan: '#3E7BB8',
-  pillBlue: '#DCE9F5',
-  pillTeal: '#CFE8D4',
-  pillCoral: '#EFE7D6',
-  pillMint: '#CFE8D4'
+  border: '#E2E8F0',
+  text: '#0F1720',
+  textMuted: '#64748B',
+  navy: '#6366F1',
+  navyDeep: '#4F46E5',
+  cyan: '#6366F1',
+  pillBlue: '#E0E7FF',
+  pillTeal: '#CCFBF1',
+  pillCoral: '#FFE4E6',
+  pillMint: '#D1FAE5'
 };
 var getCategoryColor = function getCategoryColor(n) {
   var _CATEGORIES$find;
@@ -2844,10 +2845,10 @@ function Sidebar(_ref21) {
     className: "px-4 pb-5"
   }, React.createElement("button", {
     onClick: function onClick() {
-      if (confirm('ออกจากระบบ? (ต้องกรอกรหัสผ่านทีมใหม่)')) {
+      if (confirm('ออกจากระบบ?')) {
         try {
           Object.keys(localStorage).filter(function (k) {
-            return k.indexOf('la_unlocked_') === 0;
+            return k.indexOf('la_session') === 0;
           }).forEach(function (k) {
             return localStorage.removeItem(k);
           });
@@ -3173,32 +3174,32 @@ function StatsRow(_ref25) {
   var cards = [{
     label: 'Total Task',
     value: stats.total,
-    bg: '#1A1A1A',
+    bg: '#4F46E5',
     accent: '#FFFFFF',
     dark: true,
     IconCmp: ChipCheck
   }, {
     label: 'Completed',
     value: stats.done,
-    bg: '#CFE8D4',
+    bg: '#D1FAE5',
     accent: '#2E7A4E',
     IconCmp: ChipCheck
   }, {
     label: 'In Progress',
     value: stats.inProgress,
-    bg: '#F5EFD9',
+    bg: '#FEF3C7',
     accent: '#8A6A2E',
     IconCmp: ChipCircle
   }, {
     label: 'Not Started',
     value: stats.notStarted,
-    bg: '#DCE9F5',
+    bg: '#E0E7FF',
     accent: '#3E6FA0',
     IconCmp: ChipCircle
   }, {
     label: 'Overdue',
     value: stats.overdue,
-    bg: '#F3DEDA',
+    bg: '#FFE4E6',
     accent: '#B0392C',
     IconCmp: ChipAlert
   }];
