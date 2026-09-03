@@ -526,7 +526,7 @@
       '#la-login button{background:#6366F1 !important;border-radius:12px !important}',
       '#la-login button:hover{background:#4F46E5 !important}',
       '#la-login .swap a{color:#4F46E5 !important}',
-      '#la-face-wrap{position:relative;width:150px;height:120px;margin:0 auto 14px}',
+      '#la-face-wrap{position:relative;width:200px;height:135px;margin:0 auto 16px}',
       '#la-face-wrap .eye{position:absolute;overflow:hidden;display:flex;align-items:flex-end;',
       'justify-content:center;transition:all .15s ease}',
       '#la-face-wrap .pupil{background:#1E1B4B;border-radius:50%;width:15px;height:15px;',
@@ -534,27 +534,28 @@
       ].join('');
    if (!document.getElementById('la-face-css')) document.head.appendChild(faceCss);
 
-   var FACE_HTML = '<div id="la-face-wrap">'
-   + '<svg viewBox="0 0 150 120" style="width:150px;height:120px;display:block">'
-   + '<defs><linearGradient id="laFaceG" x1="0" y1="0" x2="1" y2="1">'
-   + '<stop offset="0%" stop-color="#A5B4FC"/><stop offset="55%" stop-color="#8B5CF6"/>'
-   + '<stop offset="100%" stop-color="#F0ABFC"/></linearGradient></defs>'
-   + '<ellipse cx="75" cy="70" rx="58" ry="44" fill="url(#laFaceG)"/>'
-   + '<ellipse cx="34" cy="78" rx="22" ry="19" fill="url(#laFaceG)"/>'
-   + '<ellipse cx="116" cy="78" rx="22" ry="19" fill="url(#laFaceG)"/>'
-   + '<ellipse cx="75" cy="40" rx="34" ry="26" fill="url(#laFaceG)"/>'
-   + '<ellipse cx="52" cy="88" rx="9" ry="5" fill="#F9A8D4" opacity=".55"/>'
-   + '<ellipse cx="98" cy="88" rx="9" ry="5" fill="#F9A8D4" opacity=".55"/>'
-   + '<path d="M67 82 Q75 89 83 82" stroke="#1E1B4B" stroke-width="3" fill="none" stroke-linecap="round"/>'
-   + '</svg>'
+      var FACE_HTML = '<div id="la-face-wrap">'
+   + '<svg viewBox="0 0 200 135" style="width:200px;height:135px;display:block">'
+   + '<defs><linearGradient id="laFaceG" x1="0" y1="0" x2="0.4" y2="1">'
+   + '<stop offset="0%" stop-color="#C7BDFB"/><stop offset="45%" stop-color="#8B5CF6"/>'
+   + '<stop offset="100%" stop-color="#7C3AED"/></linearGradient></defs>'
+   + '<g fill="url(#laFaceG)">'
+   + '<circle cx="66" cy="66" r="33"/>'
+   + '<circle cx="103" cy="48" r="39"/>'
+   + '<circle cx="141" cy="66" r="31"/>'
+   + '<circle cx="52" cy="86" r="25"/>'
+   + '<circle cx="154" cy="88" r="23"/>'
+   + '<rect x="27" y="72" width="148" height="36" rx="18"/>'
+   + '</g></svg>'
    + '<div class="eye" data-eye="l"></div><div class="eye" data-eye="r"></div></div>';
 
    function setEye(el, closed) {
-      el.style.top = '48px';
-      el.style.left = (el.dataset.eye === 'l' ? 52 : 84) + 'px';
-      el.style.width = '26px';
-      el.style.height = closed ? '4px' : '32px';
-      el.style.borderRadius = closed ? '2px' : '50% / 60%';
+            el.style.position = 'absolute';
+      el.style.top = '44px';
+      el.style.left = (el.dataset.eye === 'l' ? 72 : 112) + 'px';
+      el.style.width = '30px';
+      el.style.height = closed ? '5px' : '52px';
+      el.style.borderRadius = closed ? '3px' : '50% / 45%';
       el.style.background = closed ? '#1E1B4B' : '#fff';
    }
 
