@@ -605,6 +605,11 @@
       for (var bi = 0; bi < els.length; bi++) {
          if (els[bi].textContent !== BRAND_NAME) els[bi].textContent = BRAND_NAME;
       }
+      // การ์ดทีมด้านล่างก็เขียนชื่อนี้ตายตัวเช่นกัน
+      var all = document.querySelectorAll('div.text-xs.font-semibold');
+      for (var ai = 0; ai < all.length; ai++) {
+         if ((all[ai].textContent || '').trim() === 'Marketing Team') all[ai].textContent = BRAND_NAME;
+      }
    }, 800);
    
    
