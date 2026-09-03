@@ -1,4 +1,4 @@
-/* dashboard.js — ปรับหน้าตาตาม Reference
+น/* dashboard.js — ปรับหน้าตาตาม Reference
    โหลดต่อจากโค้ดหลัก แล้วเขียนทับ component ที่เป็น global
       ไม่แตะ index.html เลย ไม่ชอบก็ลบไฟล์นี้ไฟล์เดียว */
 (function () {
