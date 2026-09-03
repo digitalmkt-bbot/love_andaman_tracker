@@ -84,4 +84,44 @@
              );
   };
 
+   // ===== 4. หัวการ์ดกราฟ — ตัดเครื่องหมาย // ออก =====
+   window.ChartCard = function (p) {
+      return e('div', { className: 'rounded-[28px] p-6', style: { background: '#fff', border: '1px solid #E2E8F0', boxShadow: '0 6px 22px rgba(30,45,60,.06)' } },
+               e('div', { className: 'flex items-start justify-between mb-4' },
+                 e('div', null,
+                   e('h3', { className: 'text-[16px] font-extrabold', style: { color: INK } }, p.title),
+                   p.subtitle ? e('p', { className: 'text-[12px] mt-0.5', style: { color: MUT } }, p.subtitle) : null),
+                 p.action || null),
+               p.children);
+   };
+
+   // ===== 5. โดนัทสถานะงาน — เลขกลางวง + legend ขวา สีตาม Ref =====
+   var REF_COLORS = ['#6B73EB', '#2BD4B7', '#FAA942', '#4A95F6', '#A78BFA'];
+   window.StatusMultiDonut = function (p) {
+      var raw = (p && p.data) || [], total = (p && p.total) || 0;
+      var data = raw.map(function (d, i) { return { name: d.name, value: d.value, color: REF_COLORS[i % REF_COLORS.length] }; });
+      var R = 52, SW = 20, C = 2 * Math.PI * R, acc = 0;
+      var segs = data.map(function (d) {
+         var len = total > 0 ? (d.value / total) * C : 0;
+         var off = -acc; acc += len;
+         return e('circle', { key: d.name, cx: 70, cy: 70, r: R, fill: 'none', stroke: d.color, strokeWidth: SW, strokeDasharray: len + ' ' + (C - len), strokeDashoffset: off, strokeLinecap: 'butt' });
+      });
+      return e('div', { className: 'flex items-center gap-6 flex-wrap' },
+               e('div', { className: 'relative shrink-0', style: { width: 150, height: 150 } },
+                 e('svg', { viewBox: '0 0 140 140', style: { width: 150, height: 150, transform: 'rotate(-90deg)' } },
+                   e('circle', { cx: 70, cy: 70, r: R, fill: 'none', stroke: '#F1F5F9', strokeWidth: SW }), segs),
+                 e('div', { className: 'absolute inset-0 flex flex-col items-center justify-center' },
+                   e('div', { className: 'text-[30px] font-black leading-none', style: { color: INK } }, total),
+                   e('div', { className: 'text-[11px] font-medium mt-1', style: { color: MUT } }, 'Total Tasks'))),
+               e('div', { className: 'flex-1 min-w-[160px] space-y-3' },
+                 data.map(function (d) {
+                    return e('div', { key: d.name, className: 'flex items-center justify-between' },
+                             e('div', { className: 'flex items-center gap-2.5' },
+                               e('span', { className: 'w-2.5 h-2.5 rounded-full', style: { background: d.color } }),
+                               e('span', { className: 'text-[13px] font-medium', style: { color: '#334155' } }, d.name)),
+                             e('span', { className: 'text-[13px] font-bold', style: { color: INK } }, d.value));
+                 })));
+   };
+   
+
 })();
