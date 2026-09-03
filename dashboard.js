@@ -611,6 +611,40 @@
          if ((all[ai].textContent || '').trim() === 'Marketing Team') all[ai].textContent = BRAND_NAME;
       }
    }, 800);
+
+   // ===== 15. ย้ายเมนูจากแถบซ้ายขึ้นมาด้านบน =====
+   // ทำด้วย CSS ล้วน ไม่แก้โครง JSX จึงไม่กระทบการทำงาน
+   // มีผลเฉพาะจอกว้าง 1024px ขึ้นไป — มือถือยังเป็นเมนูสไลด์เหมือนเดิม
+   var topCss = document.createElement('style');
+   topCss.id = 'la-topnav';
+   topCss.textContent = [
+      '@media (min-width:1024px){',
+      'aside.fixed.top-0.left-0{top:12px !important;left:12px !important;right:12px !important;',
+      'bottom:auto !important;width:auto !important;height:72px !important;flex-direction:row !important;',
+      'align-items:center !important;gap:14px;border-radius:20px !important;padding:0 14px;overflow:visible !important}',
+      'aside.fixed > div:nth-child(1){padding:0 !important;flex:none}',
+      'aside.fixed > div:nth-child(2){padding:0 !important;margin:0 !important;flex:none;width:190px}',
+      'aside.fixed > nav{flex:1 1 auto !important;display:flex !important;flex-direction:row !important;',
+      'align-items:center;gap:4px;padding:0 !important;margin:0 !important;overflow-x:auto !important;overflow-y:visible !important}',
+      'aside.fixed > nav > *{margin:0 !important}',
+      'aside.fixed > nav button{width:auto !important;white-space:nowrap;padding-left:10px !important;padding-right:12px !important}',
+      'aside.fixed > nav > div:first-child{display:none !important}',
+      'aside.fixed > div:nth-child(4){padding:0 !important;flex:none}',
+      'aside.fixed > div:nth-child(4) button{flex-direction:row !important;gap:8px;height:42px;padding:0 18px;',
+      'border-radius:14px !important;align-items:center;justify-content:center}',
+      'aside.fixed > div:nth-child(4) button > *:first-child{width:22px !important;height:22px !important;margin:0 !important}',
+      'aside.fixed > div:nth-child(5){padding:0 !important;flex:none;width:auto !important}',
+      'aside.fixed > div:nth-child(5) > *{background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important;height:auto !important}',
+      'aside.fixed > div:nth-child(5) .min-w-0{display:none !important}',
+      'aside.fixed > div:nth-child(5) svg{display:none !important}',
+      'aside.fixed > div:nth-child(6){padding:0 !important;flex:none}',
+      'aside.fixed > div:nth-child(6) button{padding:10px 12px !important}',
+      '[class*="lg:ml-[16.25rem]"]{margin-left:0 !important;padding-top:96px !important}',
+      'aside[class*="right-0"]{top:100px !important}',
+      '}'
+      ].join('');
+   if (!document.getElementById('la-topnav')) document.head.appendChild(topCss);
+   
    
    
    
