@@ -662,6 +662,21 @@
       '}'
       ].join('');
    if (!document.getElementById('la-topnav')) document.head.appendChild(topCss);
+
+   // ===== 16. จานสีสมาชิกทีม — 16 สีไม่ซ้ำ =====
+   // ก่อนหน้านี้การจับคู่สีเก่าทำให้หลายสีกลายเป็นสีเดียวกัน เหลือจริงแค่ 7 สี
+   var TEAM_COLORS_16 = [
+      '#6366F1', '#8B5CF6', '#A78BFA', '#EC4899',
+      '#F472B6', '#F59E0B', '#FB923C', '#FACC15',
+      '#2BD4B7', '#10B981', '#34D399', '#0EA5E9',
+      '#38BDF8', '#4A95F6', '#6B73EB', '#64748B'
+      ];
+   if (window.TEAM_COLOR_PALETTE) {
+      for (var ci = 0; ci < window.TEAM_COLOR_PALETTE.length && ci < TEAM_COLORS_16.length; ci++) {
+         window.TEAM_COLOR_PALETTE[ci] = TEAM_COLORS_16[ci];
+      }
+   }
+   
    
    
    
