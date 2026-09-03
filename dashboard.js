@@ -646,6 +646,14 @@
       'aside.fixed.left-0 > div:nth-child(6) button{padding:9px 12px !important;font-size:13px !important}',
       '[class*="lg:ml-[16.25rem]"]{margin-left:0 !important;padding-top:100px !important}',
       'aside.fixed.right-0{top:104px !important}',
+      'aside.fixed.left-0{gap:8px !important;padding:0 14px !important}',
+      'aside.fixed.left-0 > div:nth-child(1){max-width:170px !important}',
+      'aside.fixed.left-0 > div:nth-child(1) .la-brand{font-size:13px !important}',
+      'aside.fixed.left-0 > div:nth-child(2){width:140px !important}',
+      'aside.fixed.left-0 > nav button{padding:8px 8px !important;font-size:12.5px !important}',
+      'aside.fixed.left-0 > nav button > span:first-child{width:26px !important;height:26px !important}',
+      'aside.fixed.left-0 > div:nth-child(4) button{padding:0 12px !important;font-size:11.5px !important}',
+      'aside.fixed.left-0 > div:nth-child(6) button span{display:none !important}',
       '}'
       ].join('');
    if (!document.getElementById('la-topnav')) document.head.appendChild(topCss);
