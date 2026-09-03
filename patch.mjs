@@ -181,7 +181,7 @@ if (!lg.includes('function wireLogin')) {
   const b1 = lg.match(/^([ \t]*)var btn = box\.querySelector\('#la-go'\);/m);
   if (!b1) die('หา var btn ใน login.js ไม่เจอ');
   lg = lg.slice(0, b1.index) + b1[1] + 'function wireLogin(box) {\n' + lg.slice(b1.index);
-  const b2 = lg.match(/^([ \t]*)box\.addEventListener\('keydown'[^\n]*\n([ \t]*)\}/m);
+  const _a = [...lg.matchAll(/^([ \t]*)box\.addEventListener\('keydown'[^\n]*\n([ \t]*)\}/gm)]; const b2 = _a.length ? _a[_a.length-1] : null;
   if (!b2) die('หาท้ายฟังก์ชันล็อกอินไม่เจอ');
   const endAt = b2.index + b2[0].length;
   lg = lg.slice(0, endAt) + '\n' + b2[2] + '}' + lg.slice(endAt);

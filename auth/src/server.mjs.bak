@@ -257,60 +257,6 @@ app.post('/users', auth, async (req, res) => {
   }
 });
 
-
-/* /signup — ลูกค้าสมัครเอง ทดลองฟรี 14 วัน */
-const signups = new Map();
-function signupThrottled(ip) {
-const now = Date.now();
-const list = (signups.get(ip) || []).filter(t => now - t < 3600000);
-signups.set(ip, list);
-return list.length >= 3;
-}
-const RESERVED = new Set(['admin','api','auth','www','app','test','demo','root','support','help','billing','system']);
-
-app.post('/signup', async (req, res) => {
-const ip = req.ip;
-const { company, code, username, password } = req.body || {};
-// นับทุกครั้งที่พยายาม ไม่ใช่เฉพาะที่สำเร็จ
-// ไม่งั้นคนร้ายยิงข้อมูลผิดรัวๆ เพื่อไล่หารหัสบริษัทที่ว่างได้ฟรี
-if (signupThrottled(ip)) return res.status(429).json({ error: 'สมัครบ่อยเกินไป กรุณารออีก 1 ชั่วโมง' });
-signups.set(ip, [...(signups.get(ip) || []), Date.now()]);
-const errs = [];
-if (!company || String(company).trim().length < 2) errs.push('กรุณากรอกชื่อบริษัท');
-if (!code || !/^[a-z0-9][a-z0-9-]{2,19}$/.test(String(code).toLowerCase())) errs.push('รหัสบริษัทต้องเป็น a-z 0-9 ยาว 3-20 ตัว');
-if (RESERVED.has(String(code || '').toLowerCase())) errs.push('รหัสบริษัทนี้สงวนไว้');
-if (!username || !/^[A-Za-z0-9._-]{3,30}$/.test(String(username))) errs.push('ชื่อผู้ใช้ต้องเป็น a-z 0-9 . _ - ยาว 3-30 ตัว');
-if (!password || String(password).length < 8) errs.push('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
-if (errs.length) return res.status(400).json({ error: errs[0], errors: errs });
-const orgCode = String(code).toLowerCase();
-const client = await pool.connect();
-try {
-await client.query('BEGIN');
-const dup = await client.query('SELECT 1 FROM orgs WHERE lower(code) = $1', [orgCode]);
-if (dup.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'รหัสบริษัทนี้มีคนใช้แล้ว กรุณาเลือกใหม่', field: 'code' }); }
-const orgId = 'org_' + crypto.randomBytes(5).toString('hex');
-const uid = 'u_' + crypto.randomBytes(6).toString('hex');
-await client.query("INSERT INTO orgs (id, code, name, plan, seat_limit, status, expires_at) VALUES ($1, $2, $3, 'trial', 5, 'active', now() + interval '14 days')", [orgId, orgCode, String(company).trim()]);
-await client.query("INSERT INTO users (id, org_id, username, password_hash, role, must_change_password) VALUES ($1, $2, $3, $4, 'admin', false)", [uid, orgId, username, await bcrypt.hash(password, 10)]);
-await client.query('COMMIT');
-// ล็อกอินให้เลย ลูกค้าเข้าใช้งานได้ทันที
-const token = signToken({ id: uid, org_id: orgId, username: username, role: 'admin' });
-res.json({ token: token, expires_in: TTL_HOURS * 3600, user: { id: uid, username: username, role: 'admin', org_id: orgId, must_change_password: false }, org: { id: orgId, code: orgCode, name: String(company).trim(), plan: 'trial', trial_days: 14 } });
-} catch (e) {
-await client.query('ROLLBACK').catch(() => {});
-if (e.code === '23505') return res.status(409).json({ error: 'รหัสบริษัทหรือชื่อผู้ใช้นี้มีอยู่แล้ว' });
-console.error('signup error:', e.message);
-res.status(500).json({ error: 'ระบบขัดข้อง กรุณาลองใหม่' });
-} finally { client.release(); }
-});
-
-app.get('/check-code', async (req, res) => {
-const code = String(req.query.code || '').toLowerCase();
-if (!/^[a-z0-9][a-z0-9-]{2,19}$/.test(code) || RESERVED.has(code)) return res.json({ available: false, reason: 'invalid' });
-try { const r = await pool.query('SELECT 1 FROM orgs WHERE lower(code) = $1', [code]); res.json({ available: r.rows.length === 0 }); }
-catch { res.json({ available: null }); }
-});
-
 app.get('/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ok: true }); }
   catch { res.status(503).json({ ok: false }); }
