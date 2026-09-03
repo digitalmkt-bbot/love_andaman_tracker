@@ -1,4 +1,4 @@
-น/* dashboard.js — ปรับหน้าตาตาม Reference
+/* dashboard.js - Reference theme, logo, colors, EN/TH language
    โหลดต่อจากโค้ดหลัก แล้วเขียนทับ component ที่เป็น global
       ไม่แตะ index.html เลย ไม่ชอบก็ลบไฟล์นี้ไฟล์เดียว */
 (function () {
