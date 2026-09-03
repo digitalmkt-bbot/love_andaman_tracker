@@ -207,6 +207,38 @@
       };
       React.__laMapped = true;
    }
+
+   // ===== 9. พื้นหลัง + เต็มจอ + ชื่อข้างโลโก้ =====
+   var css = document.createElement('style');
+   css.id = 'la-ref-layout';
+   css.textContent = [
+      'div.min-h-screen.w-full.flex{background-image:none !important;',
+      'background:linear-gradient(160deg,#F2F4FA 0%,#EEF1FA 55%,#F5F3FB 100%) !important}',
+      'body.la-no-right [class*="xl:mr-80"]{margin-right:0 !important}',
+      '[data-la-logo]{gap:10px}',
+      '[data-la-logo] .la-brand{font-size:15px;font-weight:800;color:#0F1720;line-height:1.15;letter-spacing:-.01em}'
+      ].join('');
+   if (!document.getElementById('la-ref-layout')) document.head.appendChild(css);
+
+   // ใส่ชื่อทีมข้างโลโก้ และขยายเนื้อหาเต็มจอเมื่อหน้านั้นไม่มีแผงขวา
+   function syncLayout() {
+      var hosts = document.querySelectorAll('div.flex.items-center');
+      for (var i = 0; i < hosts.length; i++) {
+         var d = hosts[i];
+         if (d.dataset.laLogo) continue;
+         var t = d.textContent || '';
+         if (t.length < 40 && (/Team/.test(t) || d.querySelector('svg circle')) && d.children.length <= 3) {
+            d.dataset.laLogo = '1';
+            d.innerHTML = LOGO_SVG + '<span class="la-brand">Marketing Team</span>';
+            break;
+         }
+      }
+      var right = document.querySelector('aside[class*="right-0"]');
+      document.body.classList.toggle('la-no-right', !right);
+   }
+   syncLayout();
+   setInterval(syncLayout, 500);
+   
    
    
    
