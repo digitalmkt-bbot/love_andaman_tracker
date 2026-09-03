@@ -676,6 +676,118 @@
          window.TEAM_COLOR_PALETTE[ci] = TEAM_COLORS_16[ci];
       }
    }
+
+   // ===== 17. รูปโปรไฟล์สมาชิกทีม + ระยะเมนูหายใจ =====
+   var spaceCss = document.createElement('style');
+   spaceCss.id = 'la-nav-space';
+   spaceCss.textContent = [
+      '@media (min-width:1024px){',
+      'aside.fixed.left-0 > nav{gap:10px !important}',
+      'aside.fixed.left-0 > nav button{padding:8px 14px !important;font-size:13px !important}',
+      'aside.fixed.left-0 > nav button > span:first-child{width:28px !important;height:28px !important;margin-right:2px}',
+      '}',
+      '.la-photo-wrap{position:relative;display:inline-flex}',
+      '.la-photo-btn{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;',
+      'background:#4F46E5;color:#fff;font-size:11px;line-height:20px;text-align:center;cursor:pointer;',
+      'border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:5}'
+      ].join('');
+   if (!document.getElementById('la-nav-space')) document.head.appendChild(spaceCss);
+
+   window.__laAvatars = {};
+   function loadAvatars() {
+      if (!window.laToken || !window.LA_CONFIG) return;
+      var t;
+      try { t = window.laToken(); } catch (err) { return; }
+      if (!t) return;
+      fetch(window.LA_CONFIG.api + '/team_members?select=id,name,avatar', { headers: { Authorization: 'Bearer ' + t } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+         var m = {};
+         (d || []).forEach(function (x) { if (x.avatar) m[x.name] = x.avatar; m['#id:' + x.name] = x.id; });
+         window.__laAvatars = m;
+      })
+      .catch(function () {});
+   }
+   loadAvatars();
+   setInterval(loadAvatars, 20000);
+
+   // แสดงรูปแทนวงกลมสีเมื่อสมาชิกมีรูป
+   var prevAvatar = window.Avatar;
+   window.Avatar = function (p) {
+      var src = p && p.name ? window.__laAvatars[p.name] : null;
+      if (!src) return prevAvatar(p);
+      var size = (p && p.size) || 28;
+      return e('div', {
+         title: p.name,
+         style: {
+            width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none',
+            backgroundImage: 'url(' + src + ')', backgroundSize: 'cover', backgroundPosition: 'center',
+            boxShadow: p && p.ring ? '0 0 0 2px ' + p.ring : 'none'
+         }
+      });
+   };
+
+   // เลือกไฟล์ ย่อเป็น 128px แล้วบันทึก
+   window.__laPickAvatar = function (name) {
+      var id = window.__laAvatars['#id:' + name];
+      if (!id) { alert('ยังไม่พบสมาชิกนี้ กดบันทึกก่อน'); return; }
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      inp.onchange = function () {
+         var f = inp.files && inp.files[0];
+         if (!f) return;
+         var img = new Image();
+         img.onload = function () {
+            var c = document.createElement('canvas');
+            c.width = 128; c.height = 128;
+            var g = c.getContext('2d');
+            var s = Math.min(img.width, img.height);
+            g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
+            var url = c.toDataURL('image/jpeg', 0.82);
+            if (url.length > 60000) { alert('รูปใหญ่เกินไป ลองรูปอื่น'); return; }
+            fetch(window.LA_CONFIG.api + '/team_members?id=eq.' + id, {
+               method: 'PATCH',
+               headers: { Authorization: 'Bearer ' + window.laToken(), 'Content-Type': 'application/json' },
+               body: JSON.stringify({ avatar: url })
+            }).then(function (r) {
+               if (r.ok) { window.__laAvatars[name] = url; alert('บันทึกรูปแล้ว'); }
+               else alert('บันทึกไม่สำเร็จ (' + r.status + ')');
+            });
+         };
+         img.src = URL.createObjectURL(f);
+      };
+      inp.click();
+   };
+
+   // ใส่ปุ่ม + ที่วงกลมสีในหน้าจัดการทีม (กดวงกลมเดิมยังเปลี่ยนสีได้)
+   function addPhotoButtons() {
+      var rows = document.querySelectorAll('div.flex.items-center');
+      for (var ri = 0; ri < rows.length; ri++) {
+         var row = rows[ri];
+         if (row.dataset.laPhoto) continue;
+         var det = row.querySelector('details');
+         var inp2 = row.querySelector('input');
+         if (!det || !inp2) continue;
+         var nm = (inp2.value || '').trim();
+         if (!nm || !window.__laAvatars['#id:' + nm]) continue;
+         row.dataset.laPhoto = '1';
+         var wrap = document.createElement('span');
+         wrap.className = 'la-photo-wrap';
+         det.parentNode.insertBefore(wrap, det);
+         wrap.appendChild(det);
+         var b = document.createElement('span');
+         b.className = 'la-photo-btn';
+         b.textContent = '+';
+         b.title = 'เปลี่ยนรูปโปรไฟล์';
+         (function (n) {
+            b.onclick = function (ev) { ev.preventDefault(); ev.stopPropagation(); window.__laPickAvatar(n); };
+         })(nm);
+         wrap.appendChild(b);
+      }
+   }
+   setInterval(addPhotoButtons, 700);
+   
    
    
    
