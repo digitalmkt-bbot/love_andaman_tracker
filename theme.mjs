@@ -44,12 +44,11 @@ const T_MAP = {
 for (const [a, b] of Object.entries(T_MAP)) sub('สี ' + a.split(':')[0], a, b);
 
 // ===== 3. การ์ดสถิติ 5 ใบ (สีเขียนตายตัวใน StatsRow) =====
-sub('การ์ด Total Task', "bg: '#1A1A1A', accent: '#FFFFFF'", "bg: '#4F46E5', accent: '#FFFFFF'");
-sub('การ์ด Completed', "bg: '#CFE8D4', accent: '#2E7A4E'", "bg: '#D1FAE5', accent: '#047857'");
-sub('การ์ด In Progress', "bg: '#F5EFD9', accent: '#8A6A2E'", "bg: '#FEF3C7', accent: '#B45309'");
-sub('การ์ด Not Started', "bg: '#DCE9F5', accent: '#3E6FA0'", "bg: '#E0E7FF', accent: '#4F46E5'");
-sub('การ์ด Overdue', "bg: '#F3DEDA', accent: '#B0392C'", "bg: '#FFE4E6', accent: '#BE123C'");
-
+sub('การ์ด Total Task', "bg: '#1A1A1A'", "bg: '#4F46E5'");
+sub('การ์ด Completed', "bg: '#CFE8D4'", "bg: '#D1FAE5'");
+sub('การ์ด In Progress', "bg: '#F5EFD9'", "bg: '#FEF3C7'");
+sub('การ์ด Not Started', "bg: '#DCE9F5'", "bg: '#E0E7FF'");
+sub('การ์ด Overdue', "bg: '#F3DEDA'", "bg: '#FFE4E6'");
 // ===== 4. พื้นหลังและมุมมน =====
 sub('พื้นหลัง body', 'background: #F5F3EE', 'background: #F2F4FA');
 const ROUND = '<style id="la-ref-theme">.rounded-3xl{border-radius:28px}.rounded-2xl{border-radius:20px}</style>';
