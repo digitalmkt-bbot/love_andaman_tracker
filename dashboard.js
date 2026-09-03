@@ -457,6 +457,62 @@
    // หน่วยเวลาไทย "น." — ถูกส่งมาแยกจากตัวเลขเวลา ต้องจัดการแยก
    var prevTr2 = tr;
       tr = function (s) { if (LANG === 'en' && typeof s === 'string' && s.trim() === '\u0E19.') return ''; return prevTr2(s); };
+
+   // ===== 12. ปุ่ม Back / Forward ของเบราว์เซอร์ =====
+   // แอปเดิมสลับหน้าโดย URL ไม่เปลี่ยน กด Back จึงหลุดออกจากเว็บ
+   // ที่นี่เพิ่ม #ชื่อหน้า ทำให้ Back / Forward / รีเฟรช / ส่งลิงก์ ใช้งานได้
+   var VIEW_SLUGS = [
+      ['dashboard', ['Dashboard', 'ภาพรวม']],
+      ['tracking', ['Tracking', 'ติดตามงาน']],
+      ['planning', ['Planning Post', 'วางแผนโพสต์']],
+      ['pr', ['Public Relations Jobs', 'งานประชาสัมพันธ์']],
+      ['report', ['Report', 'รายงาน']],
+      ['history', ['Work History', 'ประวัติการทำงาน']]
+      ];
+   function slugOfLabel(label) {
+      var t = String(label || '').trim();
+      for (var si = 0; si < VIEW_SLUGS.length; si++) {
+         if (VIEW_SLUGS[si][1].indexOf(t) !== -1) return VIEW_SLUGS[si][0];
+      }
+      return null;
+   }
+   function navElBySlug(slug) {
+      var names = null;
+      for (var si = 0; si < VIEW_SLUGS.length; si++) if (VIEW_SLUGS[si][0] === slug) names = VIEW_SLUGS[si][1];
+      if (!names) return null;
+      var all = document.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+         if (all[i].children.length === 0 && names.indexOf((all[i].textContent || '').trim()) !== -1) return all[i];
+      }
+      return null;
+   }
+
+   var navSuppress = false;
+   var prevNavItem = window.NavItem;
+   window.NavItem = function (p) {
+      var slug = slugOfLabel(p.label);
+      var q = Object.assign({}, p);
+      if (slug && p.onClick) {
+         q.onClick = function () {
+            if (!navSuppress && location.hash !== '#' + slug) history.pushState({ v: slug }, '', '#' + slug);
+            return p.onClick.apply(this, arguments);
+         };
+      }
+      return prevNavItem(q);
+   };
+
+   function gotoHash() {
+      var slug = (location.hash || '#dashboard').slice(1);
+      var el = navElBySlug(slug);
+      if (!el) return;
+      navSuppress = true;
+      el.click();
+      setTimeout(function () { navSuppress = false; }, 300);
+   }
+   window.addEventListener('popstate', gotoHash);
+   // เปิดลิงก์ตรงหน้า หรือรีเฟรชแล้วให้อยู่หน้าเดิม
+   if (location.hash && location.hash !== '#dashboard') setTimeout(gotoHash, 600);
+   
    
    
    
