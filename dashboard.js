@@ -785,6 +785,38 @@
          })(nm);
          wrap.appendChild(b);
       }
+
+      // ===== 18. บังคับวาดหน้าใหม่ตอนเปิดครั้งแรก =====
+      // ไฟล์นี้โหลดหลังแอปวาดเสร็จ การเขียนทับ component จึงยังไม่มีผลจนกว่าจะวาดรอบถัดไป
+      // ที่นี่สลับเมนูไปกลับหนึ่งครั้งเพื่อให้วาดใหม่ด้วยธีมที่ถูกต้อง
+      function forceRepaint() {
+         var labels = ['Dashboard', 'ภาพรวม'];
+         var other = ['Tracking', 'ติดตามงาน'];
+         function byText(list) {
+            var all = document.querySelectorAll('*');
+            for (var i = 0; i < all.length; i++) {
+               if (all[i].children.length === 0 && list.indexOf((all[i].textContent || '').trim()) !== -1) return all[i];
+            }
+            return null;
+         }
+         var a = byText(other), b2 = byText(labels);
+         if (!a || !b2) return false;
+         navSuppress = true;
+         a.click();
+         setTimeout(function () {
+            b2.click();
+            setTimeout(function () { navSuppress = false; }, 300);
+         }, 60);
+         return true;
+      }
+      var repaintTries = 0;
+      var repaintTimer = setInterval(function () {
+         repaintTries++;
+         if (repaintTries > 20) { clearInterval(repaintTimer); return; }
+         if (document.querySelector('#la-login')) return;
+         if (forceRepaint()) clearInterval(repaintTimer);
+      }, 400);
+      
    }
    setInterval(addPhotoButtons, 700);
    
