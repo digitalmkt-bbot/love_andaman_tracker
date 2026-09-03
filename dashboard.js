@@ -456,10 +456,7 @@
 
    // หน่วยเวลาไทย "น." — ถูกส่งมาแยกจากตัวเลขเวลา ต้องจัดการแยก
    var prevTr2 = tr;
-   tr = function (s) {
-      if (LANG === 'en' && typeof s === 'string' && s.trim() === 'น.') return '';
-      return prevTr2(s);
-   };
+      tr = function (s) { if (LANG === 'en' && typeof s === 'string' && s.trim() === '\u0E19.') return ''; return prevTr2(s); };
    
    
    
