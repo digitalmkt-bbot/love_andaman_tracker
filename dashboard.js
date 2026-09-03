@@ -226,7 +226,7 @@
          var d = hosts[i];
          if (d.dataset.laLogo) continue;
          var t = d.textContent || '';
-         if (t.length < 40 && (/Team/.test(t) || d.querySelector('svg circle')) && d.children.length <= 3) {
+                     if (t.length < 40 && /Team/.test(t) && d.children.length <= 3) {
             d.dataset.laLogo = '1';
             d.innerHTML = LOGO_SVG + '<span class="la-brand">Marketing Team</span>';
             break;
