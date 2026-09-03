@@ -97,7 +97,7 @@ button,a[role="button"]{min-height:40px}
     /* ===== PostgREST (Railway PostgreSQL) data layer — replaces Firebase ===== */
     var LA_API = (window.LA_CONFIG && window.LA_CONFIG.api) || 'https://api-clone-task.up.railway.app';
     /* token มาจากการล็อกอินเท่านั้น (login.js) */
-    function laFetch(u,o){o=o||{};o.headers=Object.assign({'Authorization':'Bearer '+(window.laToken?window.laToken():'')},o.headers||{});return fetch(u,o).then(function(r){if(r.status===401){localStorage.removeItem('la_session');location.reload();}return r;});}
+    function laFetch(u,o){o=o||{};var _tk=(window.laToken?window.laToken():'');o.headers=Object.assign({'Authorization':'Bearer '+_tk},o.headers||{});return fetch(u,o).then(function(r){if(r.status===401&&_tk){localStorage.removeItem('la_session');location.reload();}return r;});}
     var LA_CURKEY = 'la_current_project_v1';
     var JH = { 'Content-Type': 'application/json' };
 
