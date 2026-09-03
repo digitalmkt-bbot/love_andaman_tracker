@@ -173,6 +173,41 @@
       var mo = new MutationObserver(function () { applyLogo(); });
       mo.observe(document.body, { childList: true, subtree: true });
    } catch (err) {}
+
+   // ===== 8. ดักที่ React — จับสีเก่าทุกที่เหลือ =====
+   // บางสีเขียนตรงในโค้ด บางสีถูกบันทึกในฐานข้อมูลไปแล้ว (สีสมาชิกทีม)
+   // ดักตรงนี้จึงครอบคลุมทุกทางในครั้งเดียว
+   function mapHex(v) {
+      if (typeof v !== 'string' || v.indexOf('#') === -1) return v;
+      var out = v;
+      for (var k in COLOR_MAP) {
+         if (out.toUpperCase().indexOf(k) !== -1) out = out.replace(new RegExp(k, 'gi'), COLOR_MAP[k]);
+      }
+      return out;
+   }
+   if (React && !React.__laMapped) {
+      var origCreate = React.createElement;
+      React.createElement = function (type, props) {
+         if (props && props.style && typeof props.style === 'object') {
+            var changed = null;
+            for (var k in props.style) {
+               var nv = mapHex(props.style[k]);
+               if (nv !== props.style[k]) { changed = changed || Object.assign({}, props.style); changed[k] = nv; }
+            }
+            if (changed) { arguments[1] = Object.assign({}, props, { style: changed }); }
+         }
+         var p2 = arguments[1];
+         if (p2 && (type === 'circle' || type === 'path' || type === 'rect')) {
+            var fa = mapHex(p2.fill), sa = mapHex(p2.stroke);
+            if (fa !== p2.fill || sa !== p2.stroke) {
+               arguments[1] = Object.assign({}, p2, { fill: fa, stroke: sa });
+            }
+         }
+         return origCreate.apply(this, arguments);
+      };
+      React.__laMapped = true;
+   }
+   
    
    
 
