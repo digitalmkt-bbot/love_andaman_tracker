@@ -215,8 +215,7 @@
       'div.min-h-screen.w-full.flex{background-image:none !important;',
       'background:linear-gradient(160deg,#F2F4FA 0%,#EEF1FA 55%,#F5F3FB 100%) !important}',
       'body.la-no-right [class*="xl:mr-80"]{margin-right:0 !important}',
-      '[data-la-logo]{gap:10px}',
-      '[data-la-logo] .la-brand{font-size:15px;font-weight:800;color:#0F1720;line-height:1.15;letter-spacing:-.01em}'
+'[data-la-logo]{gap:10px !important;justify-content:flex-start !important}',      '[data-la-logo] .la-brand{font-size:15px;font-weight:800;color:#0F1720;line-height:1.15;letter-spacing:-.01em}'
       ].join('');
    if (!document.getElementById('la-ref-layout')) document.head.appendChild(css);
 
@@ -238,6 +237,118 @@
    }
    syncLayout();
    setInterval(syncLayout, 500);
+
+   // ===== 10. สองภาษา ไทย / อังกฤษ =====
+   // เก็บภาษาที่เลือกไว้ในเครื่อง สลับแล้วโหลดหน้าใหม่
+   var LANG = 'th';
+   try { LANG = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+
+   var PAIRS = [
+      ['Dashboard', 'ภาพรวม'],
+      ['Tracking', 'ติดตามงาน'],
+      ['Planning Post', 'วางแผนโพสต์'],
+      ['Public Relations Jobs', 'งานประชาสัมพันธ์'],
+      ['Report', 'รายงาน'],
+      ['Work History', 'ประวัติการทำงาน'],
+      ['// Main Menu', '// เมนูหลัก'],
+      ['Project', 'โปรเจกต์'],
+      ['Progress', 'ความคืบหน้า'],
+      ['Add New Task', 'เพิ่มงานใหม่'],
+      ['Logout', 'ออกจากระบบ'],
+      ['Search', 'ค้นหา'],
+      ['Total Task', 'งานทั้งหมด'],
+      ['Total Tasks', 'งานทั้งหมด'],
+      ['Completed', 'เสร็จแล้ว'],
+      ['In Progress', 'กำลังทำ'],
+      ['Not Started', 'ยังไม่เริ่ม'],
+      ['Overdue', 'เลยกำหนด'],
+      ['Published', 'เผยแพร่แล้ว'],
+      ['Planned', 'วางแผนไว้'],
+      ['Cancelled', 'ยกเลิก'],
+      ['Total Posts', 'โพสต์ทั้งหมด'],
+      ['Upcoming', 'ใกล้ถึงกำหนด'],
+      ['Task Percentage', 'สัดส่วนงาน'],
+      ['Tasks by category', 'งานแบ่งตามหมวด'],
+      ['Work Progress', 'งานที่กำลังดำเนินการ'],
+      ['Working Status', 'สถานะการทำงาน'],
+      ['Member Working', 'คนที่กำลังทำงาน'],
+      ['Active', 'กำลังทำ'],
+      ['Idle', 'ว่าง'],
+      ['See All \u2192', 'ดูทั้งหมด \u2192'],
+      ['Reload', 'โหลดใหม่'],
+      ["Today's Focus", 'โฟกัสวันนี้']
+      ];
+
+   // สร้างตารางค้นสองทาง จะได้สลับกลับไปมาได้
+   var T_MAP = {};
+   for (var pi = 0; pi < PAIRS.length; pi++) {
+      var en = PAIRS[pi][0], th = PAIRS[pi][1];
+      T_MAP[en] = { en: en, th: th };
+      T_MAP[th] = { en: en, th: th };
+   }
+   function tr(s) {
+      if (typeof s !== 'string') return s;
+      var hit = T_MAP[s.trim()];
+      if (!hit) return s;
+      return hit[LANG] || s;
+   }
+
+   // ดักข้อความที่ React วาด แล้วแปลตามภาษาที่เลือก
+   if (React && !React.__laI18n) {
+      var prevCreate = React.createElement;
+      React.createElement = function (type, props) {
+         var args = Array.prototype.slice.call(arguments);
+         for (var i = 2; i < args.length; i++) {
+            if (typeof args[i] === 'string') args[i] = tr(args[i]);
+         }
+         if (args[1] && typeof args[1] === 'object') {
+            var p = args[1], changed = null;
+            ['placeholder', 'title'].forEach(function (k) {
+               if (typeof p[k] === 'string') {
+                  var nv = tr(p[k]);
+                  if (nv !== p[k]) { changed = changed || Object.assign({}, p); changed[k] = nv; }
+               }
+            });
+            if (changed) args[1] = changed;
+         }
+         return prevCreate.apply(this, args);
+      };
+      React.__laI18n = true;
+   }
+
+   // ปุ่มสลับภาษา วางข้างช่องค้นหาด้านบน
+   var langCss = document.createElement('style');
+   langCss.textContent = [
+      '.la-lang{display:inline-flex;align-items:center;gap:2px;background:#fff;border:1px solid #E2E8F0;',
+      'border-radius:999px;padding:3px;box-shadow:0 2px 8px rgba(30,45,60,.06);flex:none}',
+      '.la-lang button{border:0;background:transparent;cursor:pointer;font-size:12px;font-weight:700;',
+      'padding:4px 10px;border-radius:999px;color:#64748B;line-height:1.2}',
+      '.la-lang button.on{background:#4F46E5;color:#fff}'
+      ].join('');
+   document.head.appendChild(langCss);
+
+   function setLang(v) {
+      try { localStorage.setItem('la_lang', v); } catch (err) {}
+      location.reload();
+   }
+   function addLangSwitch() {
+      if (document.querySelector('.la-lang')) return;
+      var sb = document.querySelector('input[type="text"], input:not([type])');
+      var bar = sb && sb.closest('div.flex.items-center');
+      if (bar) bar = bar.parentElement;
+      if (!bar) return;
+      var box = document.createElement('div');
+      box.className = 'la-lang';
+      box.innerHTML = '<button data-l="th">TH</button><button data-l="en">EN</button>';
+      box.querySelectorAll('button').forEach(function (b) {
+         if (b.dataset.l === LANG) b.className = 'on';
+         b.addEventListener('click', function () { setLang(b.dataset.l); });
+      });
+      bar.appendChild(box);
+   }
+   addLangSwitch();
+   setInterval(addLangSwitch, 700);
+   
    
    
    
