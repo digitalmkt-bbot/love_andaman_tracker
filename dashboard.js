@@ -581,6 +581,32 @@
    }
    mountFace();
    setInterval(mountFace, 600);
+
+   // ===== 14. ใช้ชื่อบริษัทจริงแทนคำว่า Marketing Team =====
+   // แอปเดิมเขียนชื่อนี้ตายตัว ลูกค้าทุกรายจึงเห็นชื่อเดียวกันหมด
+   var BRAND_NAME = '';
+   var brandLoading = false;
+   function loadBrand() {
+      if (BRAND_NAME || brandLoading) return;
+      if (!window.laToken || !window.LA_CONFIG) return;
+      var t;
+      try { t = window.laToken(); } catch (err) { return; }
+      if (!t) return;
+      brandLoading = true;
+      fetch(window.LA_CONFIG.api + '/orgs?select=name', { headers: { Authorization: 'Bearer ' + t } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d[0] && d[0].name) BRAND_NAME = d[0].name; brandLoading = false; })
+      .catch(function () { brandLoading = false; });
+   }
+   setInterval(function () {
+      loadBrand();
+      if (!BRAND_NAME) return;
+      var els = document.querySelectorAll('[data-la-logo] .la-brand');
+      for (var bi = 0; bi < els.length; bi++) {
+         if (els[bi].textContent !== BRAND_NAME) els[bi].textContent = BRAND_NAME;
+      }
+   }, 800);
+   
    
    
    
