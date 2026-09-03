@@ -816,6 +816,40 @@
          if (document.querySelector('#la-login')) return;
          if (forceRepaint()) clearInterval(repaintTimer);
       }, 400);
+   // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
+
+      // ===== 19. ปุ่มเปลี่ยนรูป — สร้างผ่าน React ไม่แตะ DOM =====
+      // วิธีเดิมแทรกปุ่มด้วย DOM ทุกครั้งที่ React วาดใหม่ ปุ่มจึงซ้ำสะสมจนหน้าค้าง
+      if (React && !React.__laPhotoHook) {
+         var prevCE3 = React.createElement;
+         React.createElement = function (type, props) {
+            var args = Array.prototype.slice.call(arguments);
+            if (type === 'div' && props && typeof props.className === 'string'
+                && props.className.indexOf('p-2.5 rounded-lg border') !== -1) {
+               var nm2 = null;
+               for (var qi = 2; qi < args.length; qi++) {
+                  var ch = args[qi];
+                  if (ch && ch.type === 'input' && ch.props && typeof ch.props.value === 'string') nm2 = ch.props.value.trim();
+               }
+               if (nm2 && window.__laAvatars['#id:' + nm2]) {
+                  args.push(prevCE3('button', {
+                     key: 'la-photo',
+                     type: 'button',
+                     title: 'เปลี่ยนรูปโปรไฟล์',
+                     onClick: (function (n) {
+                        return function (ev) { ev.preventDefault(); window.__laPickAvatar(n); };
+                     })(nm2),
+                     style: {
+                        flex: 'none', padding: '6px 10px', borderRadius: '10px', fontSize: '12px',
+                        background: '#EEF2FF', color: '#4F46E5', fontWeight: 600, whiteSpace: 'nowrap'
+                     }
+                  }, 'รูป'));
+               }
+            }
+            return prevCE3.apply(this, args);
+         };
+         React.__laPhotoHook = true;
+      }
       
    }
    setInterval(addPhotoButtons, 700);
