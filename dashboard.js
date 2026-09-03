@@ -913,6 +913,50 @@
    
       // (วงเล็บปิดถูกย้ายขึ้นไปปิด addPhotoButtons ด้านบนแล้ว)
       // ปิดตัวเดิมทิ้ง — ใช้ส่วนที่ 19 ที่สร้างปุ่มผ่าน React แทน
+
+   // ===== 21. ตัวเลือกรูปรุ่นสุดท้าย — อ่านไฟล์เป็น data: แทน blob: =====
+   // สาเหตุที่รูป JPEG ปกติเปิดไม่ได้ — หน้านี้ตั้ง img-src ไว้เป็น 'self' data: https:
+   // ไม่มี blob: ลิงก์จาก URL.createObjectURL จึงถูกบล็อกทุกครั้ง
+   window.__laPickAvatar = function (name) {
+      var id = window.__laAvatars['#id:' + name];
+      if (!id) { alert('ยังไม่พบสมาชิกนี้ กดบันทึกก่อน'); return; }
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/jpeg,image/png,image/webp';
+      inp.onchange = function () {
+         var f = inp.files && inp.files[0];
+         if (!f) return;
+         var low = (f.name || '').toLowerCase();
+         if (/\.(heic|heif)$/.test(low)) {
+            alert('ไฟล์ HEIC จาก iPhone เปิดในเบราว์เซอร์ไม่ได้\n\nเปิดรูปในแอป Photos กดแชร์ → Save to Files ก่อน');
+            return;
+         }
+         var fr = new FileReader();
+         fr.onerror = function () { alert('อ่านไฟล์ไม่สำเร็จ ลองเลือกไฟล์อื่น'); };
+         fr.onload = function () {
+            var img = new Image();
+            img.onerror = function () {
+               alert('เปิดไฟล์นี้ไม่ได้ (' + (f.type || 'ไม่ทราบชนิด') + ')\n\nรองรับ JPG PNG WEBP');
+            };
+            img.onload = function () {
+               try {
+                  var c = document.createElement('canvas');
+                  c.width = 128; c.height = 128;
+                  var g = c.getContext('2d');
+                  var s = Math.min(img.width, img.height);
+                  g.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 128, 128);
+                  var out = c.toDataURL('image/jpeg', 0.82);
+                  if (out.length > 60000) { alert('รูปใหญ่เกินไป ลองรูปอื่น'); return; }
+                  saveAvatar(name, id, out);
+               } catch (err) { alert('ย่อรูปไม่สำเร็จ: ' + err.message); }
+            };
+            img.src = fr.result;
+         };
+         fr.readAsDataURL(f);
+      };
+      inp.click();
+   };
+   
    
    
    
