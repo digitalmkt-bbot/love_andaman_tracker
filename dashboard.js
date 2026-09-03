@@ -512,6 +512,75 @@
    window.addEventListener('popstate', gotoHash);
    // เปิดลิงก์ตรงหน้า หรือรีเฟรชแล้วให้อยู่หน้าเดิม
    if (location.hash && location.hash !== '#dashboard') setTimeout(gotoHash, 600);
+
+   // ===== 13. หน้าล็อกอิน — ตัวการ์ตูนตามองตามเมาส์ =====
+   // วาดเองทั้งหมดเป็น SVG ไม่ดึงรูปจากที่อื่น จึงไม่มีปัญหาลิขสิทธิ์
+   var faceCss = document.createElement('style');
+   faceCss.id = 'la-face-css';
+   faceCss.textContent = [
+      '#la-login{background:linear-gradient(160deg,#EEF2FF 0%,#F5F3FB 45%,#FCE7F3 100%) !important}',
+      '#la-login .card{background:rgba(255,255,255,.78) !important;backdrop-filter:blur(14px);',
+      'border:1px solid rgba(255,255,255,.9) !important;border-radius:22px !important;',
+      'box-shadow:0 18px 50px rgba(79,70,229,.13) !important}',
+      '#la-login input:focus{border-color:#6366F1 !important;box-shadow:0 0 0 3px rgba(99,102,241,.16) !important}',
+      '#la-login button{background:#6366F1 !important;border-radius:12px !important}',
+      '#la-login button:hover{background:#4F46E5 !important}',
+      '#la-login .swap a{color:#4F46E5 !important}',
+      '#la-face-wrap{position:relative;width:150px;height:120px;margin:0 auto 14px}',
+      '#la-face-wrap .eye{position:absolute;overflow:hidden;display:flex;align-items:flex-end;',
+      'justify-content:center;transition:all .15s ease}',
+      '#la-face-wrap .pupil{background:#1E1B4B;border-radius:50%;width:15px;height:15px;',
+      'margin-bottom:4px;transition:transform .08s linear}'
+      ].join('');
+   if (!document.getElementById('la-face-css')) document.head.appendChild(faceCss);
+
+   var FACE_HTML = '<div id="la-face-wrap">'
+   + '<svg viewBox="0 0 150 120" style="width:150px;height:120px;display:block">'
+   + '<defs><linearGradient id="laFaceG" x1="0" y1="0" x2="1" y2="1">'
+   + '<stop offset="0%" stop-color="#A5B4FC"/><stop offset="55%" stop-color="#8B5CF6"/>'
+   + '<stop offset="100%" stop-color="#F0ABFC"/></linearGradient></defs>'
+   + '<ellipse cx="75" cy="70" rx="58" ry="44" fill="url(#laFaceG)"/>'
+   + '<ellipse cx="34" cy="78" rx="22" ry="19" fill="url(#laFaceG)"/>'
+   + '<ellipse cx="116" cy="78" rx="22" ry="19" fill="url(#laFaceG)"/>'
+   + '<ellipse cx="75" cy="40" rx="34" ry="26" fill="url(#laFaceG)"/>'
+   + '<ellipse cx="52" cy="88" rx="9" ry="5" fill="#F9A8D4" opacity=".55"/>'
+   + '<ellipse cx="98" cy="88" rx="9" ry="5" fill="#F9A8D4" opacity=".55"/>'
+   + '<path d="M67 82 Q75 89 83 82" stroke="#1E1B4B" stroke-width="3" fill="none" stroke-linecap="round"/>'
+   + '</svg>'
+   + '<div class="eye" data-eye="l"></div><div class="eye" data-eye="r"></div></div>';
+
+   function setEye(el, closed) {
+      el.style.top = '48px';
+      el.style.left = (el.dataset.eye === 'l' ? 52 : 84) + 'px';
+      el.style.width = '26px';
+      el.style.height = closed ? '4px' : '32px';
+      el.style.borderRadius = closed ? '2px' : '50% / 60%';
+      el.style.background = closed ? '#1E1B4B' : '#fff';
+   }
+
+   function mountFace() {
+      var card = document.querySelector('#la-login .card');
+      if (!card || card.querySelector('#la-face-wrap')) return;
+      card.insertAdjacentHTML('afterbegin', FACE_HTML);
+      var eyes = card.querySelectorAll('.eye');
+      for (var i = 0; i < eyes.length; i++) { eyes[i].innerHTML = '<div class="pupil"></div>'; setEye(eyes[i], false); }
+      var typing = false, blinking = false;
+      function paint() { for (var j = 0; j < eyes.length; j++) setEye(eyes[j], typing || blinking); }
+      document.addEventListener('mousemove', function (ev) {
+         var dx = ((ev.clientX / window.innerWidth) - 0.5) * 16;
+         var ps = card.querySelectorAll('.pupil');
+         for (var k = 0; k < ps.length; k++) ps[k].style.transform = 'translateX(' + dx.toFixed(1) + 'px)';
+      });
+      setInterval(function () { blinking = true; paint(); setTimeout(function () { blinking = false; paint(); }, 170); }, 3200);
+      var pw = card.querySelectorAll('input[type=password]');
+      for (var m = 0; m < pw.length; m++) {
+         pw[m].addEventListener('focus', function () { typing = true; paint(); });
+         pw[m].addEventListener('blur', function () { typing = false; paint(); });
+      }
+   }
+   mountFace();
+   setInterval(mountFace, 600);
+   
    
    
    
