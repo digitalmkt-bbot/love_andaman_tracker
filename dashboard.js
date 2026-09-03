@@ -348,6 +348,107 @@
    }
    addLangSwitch();
    setInterval(addLangSwitch, 700);
+
+   // ===== 11. เติมคำแปลที่ขาด + ครอบคลุม props และวันที่ =====
+   var EXTRA_PAIRS = [
+      ['Planning Post Summary', 'สรุป Planning Post'],
+      ['All posts in this project', 'ภาพรวมโพสต์ทั้งหมดในโปรเจกต์นี้'],
+      ['No data', 'ไม่มีข้อมูล'],
+      ['By current status', 'แบ่งตามสถานะปัจจุบัน'],
+      ['Tasks in progress', 'งานที่กำลังดำเนินการ'],
+      ['Active members', 'ทีมที่ active'],
+      ['Pick a date or a range', 'คลิกเลือกวัน หรือเลือกเป็นช่วงวัน'],
+      ['No upcoming deadlines', 'ไม่มี deadline ใกล้ๆ'],
+      ['New project', 'เพิ่มโปรเจกต์ใหม่'],
+      ['Main', 'หลัก'],
+      ['Manage', 'จัดการ'],
+      ['All', 'ทั้งหมด'],
+      ['All categories', 'ทุกหมวด'],
+      ['Everyone', 'ทุกคน'],
+      ['All statuses', 'ทุกสถานะ'],
+      ['All channels', 'ทุก Channel'],
+      ['Unassigned', 'ยังไม่ assign'],
+      ['No posts yet', 'ยังไม่มี Post'],
+      ['Plan your first social post', 'เริ่มวางแผน social media ครั้งแรก'],
+      ['Period', 'ช่วงเวลา'],
+      ['On time', 'ตรงเวลา'],
+      ['Today', 'วันนี้'],
+      ['Leaderboard', 'อันดับผลงาน'],
+      ['Completed tasks', 'งานที่ทำเสร็จ'],
+      ['Total done', 'ผลงานรวม (เสร็จ)'],
+      ['On-time (team)', 'งานตรงเวลา (ทีม)'],
+      ['Completion rate (team)', 'Completion rate (ทีม)'],
+      ['Team KPI (vs target)', 'KPI ทีม (เทียบเป้าหมาย)'],
+      ['Data sources', 'แหล่งข้อมูล'],
+      ['Posts/month', 'โพสต์/เดือน'],
+      ['Published posts/person/month', 'โพสต์เผยแพร่/คน/เดือน'],
+      ['System', 'ระบบ'],
+      ['Other', 'อื่นๆ'],
+      ['Article', 'บทความ'],
+      ['Photo', 'ภาพถ่าย'],
+      ['Video', 'วิดีโอ'],
+      ['Graphic', 'กราฟิก'],
+      ['Website', 'เว็บไซต์'],
+      ['Campaign', 'แคมเปญ'],
+      ['Social', 'โซเชียล']
+      ];
+   for (var xi = 0; xi < EXTRA_PAIRS.length; xi++) {
+      var xen = EXTRA_PAIRS[xi][0], xth = EXTRA_PAIRS[xi][1];
+      T_MAP[xen] = { en: xen, th: xth };
+      T_MAP[xth] = { en: xen, th: xth };
+   }
+
+   // เดือนไทย → อังกฤษ สำหรับวันที่ที่สร้างจากการต่อสตริง
+   var TH_MONTHS = { 'มกราคม':'January','กุมภาพันธ์':'February','มีนาคม':'March','เมษายน':'April','พฤษภาคม':'May','มิถุนายน':'June','กรกฎาคม':'July','สิงหาคม':'August','กันยายน':'September','ตุลาคม':'October','พฤศจิกายน':'November','ธันวาคม':'December' };
+   var TH_ABBR = { 'ม.ค.':'Jan','ก.พ.':'Feb','มี.ค.':'Mar','เม.ย.':'Apr','พ.ค.':'May','มิ.ย.':'Jun','ก.ค.':'Jul','ส.ค.':'Aug','ก.ย.':'Sep','ต.ค.':'Oct','พ.ย.':'Nov','ธ.ค.':'Dec' };
+   var PREFIX_RULES = [ [/^เป้า\s*/, 'Target '] ];
+
+   // แทน tr เดิม — ตัวดัก React เรียก tr ตอนทำงาน จึงได้ตัวใหม่โดยอัตโนมัติ
+   var baseTr = tr;
+   tr = function (s) {
+      if (typeof s !== 'string') return s;
+      var out = baseTr(s);
+      if (out !== s) return out;
+      var t = s.trim();
+      if (LANG === 'en') {
+         for (var ri = 0; ri < PREFIX_RULES.length; ri++) {
+            if (PREFIX_RULES[ri][0].test(t)) return t.replace(PREFIX_RULES[ri][0], PREFIX_RULES[ri][1]);
+         }
+         var d = t;
+         for (var mk in TH_MONTHS) if (d.indexOf(mk) !== -1) d = d.split(mk).join(TH_MONTHS[mk]);
+         for (var ak in TH_ABBR) if (d.indexOf(ak) !== -1) d = d.split(ak).join(TH_ABBR[ak]);
+         d = d.replace(/\sน\.$/, '');
+         if (d !== t) return d;
+      }
+      return s;
+   };
+
+   // แปลข้อความที่ส่งผ่าน props ด้วย (title / subtitle / label / placeholder)
+   if (React && !React.__laI18nProps) {
+      var prevCreate2 = React.createElement;
+      var TR_PROPS = ['title', 'subtitle', 'label', 'placeholder'];
+      React.createElement = function (type, props) {
+         var args = Array.prototype.slice.call(arguments);
+         if (args[1] && typeof args[1] === 'object') {
+            var changed = null;
+            for (var pi2 = 0; pi2 < TR_PROPS.length; pi2++) {
+               var key = TR_PROPS[pi2], nv = tr(args[1][key]);
+               if (nv !== args[1][key]) { changed = changed || Object.assign({}, args[1]); changed[key] = nv; }
+            }
+            if (changed) args[1] = changed;
+         }
+         return prevCreate2.apply(this, args);
+      };
+      React.__laI18nProps = true;
+   }
+
+   // ชื่อสถานะและหมวดเก็บในตัวแปร ต้องแปลที่ต้นทาง
+   if (window.STATUS_META) Object.keys(window.STATUS_META).forEach(function (k) {
+      var s = window.STATUS_META[k];
+      if (s && s.label) s.label = tr(s.label);
+   });
+   if (window.CATEGORIES) window.CATEGORIES.forEach(function (c) { if (c && c.name) c.name = tr(c.name); });
+   
    
    
    
