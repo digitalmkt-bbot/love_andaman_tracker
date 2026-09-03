@@ -3,8 +3,8 @@
       ไม่แตะ index.html เลย ไม่ชอบก็ลบไฟล์นี้ไฟล์เดียว */
 (function () {
   if (typeof React === 'undefined') return;
-  var e = React.createElement;
-  var IND = '#6366F1', DEEP = '#4F46E5', INK = '#0F1720', MUT = '#64748B';
+   function e() { return React.createElement.apply(null, arguments); 
+                }  var IND = '#6366F1', DEEP = '#4F46E5', INK = '#0F1720', MUT = '#64748B';
 
   // ===== 1. การ์ดต้อนรับ — ไล่สีม่วง-ชมพูตาม Ref =====
   window.WelcomeCard = function (p) {
@@ -352,6 +352,11 @@
    // ===== 11. เติมคำแปลที่ขาด + ครอบคลุม props และวันที่ =====
    var EXTRA_PAIRS = [
       ['Planning Post Summary', 'สรุป Planning Post'],
+      ['⚠️ No data — press Reload to fetch from Cloud', '⚠️ ไม่พบข้อมูล — กด Reload เพื่อโหลดจาก Cloud'],
+      ['Target 8 posts', 'เป้า 8 โพสต์'],
+      ['Add New Jobs', 'เพิ่มงาน PR'],
+      ['Add Post', 'เพิ่ม Post'],
+      ['Add first Post', 'เพิ่ม Post แรก'],
       ['All posts in this project', 'ภาพรวมโพสต์ทั้งหมดในโปรเจกต์นี้'],
       ['No data', 'ไม่มีข้อมูล'],
       ['By current status', 'แบ่งตามสถานะปัจจุบัน'],
