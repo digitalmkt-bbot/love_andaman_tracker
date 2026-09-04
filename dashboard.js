@@ -1417,6 +1417,18 @@
       return null;
    }
    rUp = laColorKey;
+
+   // ===== 32. กล่องหุ้มทั้งหน้าในโหมดมืด =====
+   // ส่วนที่ 9 ตั้งไล่สีขาวไว้ด้วย !important กับตัวเลือก 3 คลาส
+   // จึงชนะทุกกฎของโหมดมืด — จอกว้างจึงเห็นขอบสว่างโผล่มา
+   var rootBgCss = document.createElement('style');
+   rootBgCss.id = 'la-dark-rootbg';
+   rootBgCss.textContent = [
+      'body.la-dark div.min-h-screen.w-full.flex{background:' + RP.PAGE + ' !important}',
+      'body.la-dark #la-login{background:' + RP.PAGE + ' !important}'
+      ].join('');
+   if (!document.getElementById('la-dark-rootbg')) document.head.appendChild(rootBgCss);
+   
    
    
    
