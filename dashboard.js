@@ -956,6 +956,48 @@
       };
       inp.click();
    };
+
+   // ===== 22. วงกลมในหน้าจัดการทีมให้แสดงรูปด้วย =====
+   // เดิมรูปขึ้นเฉพาะที่อื่น แต่ในหน้านี้เป็น summary ของตัวเลือกสี จึงต้องใส่รูปแยก
+   if (React && !React.__laSummaryPhoto) {
+      var prevCE4 = React.createElement;
+      React.createElement = function (type, props) {
+         var args = Array.prototype.slice.call(arguments);
+         if (type === 'div' && props && typeof props.className === 'string'
+             && props.className.indexOf('p-2.5 rounded-lg border') !== -1) {
+            var nm3 = null;
+            for (var si = 2; si < args.length; si++) {
+               var cc2 = args[si];
+               if (cc2 && cc2.type === 'input' && cc2.props && typeof cc2.props.value === 'string') nm3 = cc2.props.value.trim();
+            }
+            var src2 = nm3 && window.__laAvatars[nm3];
+            if (src2) {
+               for (var di = 2; di < args.length; di++) {
+                  var dd = args[di];
+                  if (dd && dd.type === 'details') {
+                     var kids2 = React.Children.toArray(dd.props.children).map(function (k) {
+                        if (k && k.type === 'summary') {
+                           return prevCE4('summary', Object.assign({}, k.props, {
+                              style: Object.assign({}, k.props.style, {
+                                 backgroundImage: 'url(' + src2 + ')',
+                                 backgroundSize: 'cover',
+                                 backgroundPosition: 'center',
+                                 color: 'transparent'
+                              })
+                           }), null);
+                        }
+                        return k;
+                     });
+                     args[di] = prevCE4('details', dd.props, kids2);
+                  }
+               }
+            }
+         }
+         return prevCE4.apply(this, args);
+      };
+      React.__laSummaryPhoto = true;
+   }
+   
    
    
    
