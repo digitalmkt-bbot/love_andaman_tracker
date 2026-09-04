@@ -1428,6 +1428,38 @@
       'body.la-dark #la-login{background:' + RP.PAGE + ' !important}'
       ].join('');
    if (!document.getElementById('la-dark-rootbg')) document.head.appendChild(rootBgCss);
+
+   // ===== 33. ปุ่ม Add New Task ในการ์ดต้อนรับ — เปิดกล่องเพิ่ม Task ทันที =====
+   // เดิมกดแล้วไม่มีอะไรเกิดขึ้นเลย — สั่งให้ไปกดปุ่ม ADD NEW TASK บนแถบแทน
+   // ใช้วิธีนี้เพราะไม่ต้องไปแก้ state ของแอป จึงไม่เสี่ยงทำของเดิมพัง
+   function laHeroAddBtn() {
+      var bs = document.querySelectorAll('button');
+      for (var hi = 0; hi < bs.length; hi++) {
+         var t = (bs[hi].textContent || '').trim();
+         if (/Add New Task|เพิ่มงานใหม่/i.test(t) && String(bs[hi].className).indexOf('pl-6') !== -1) return bs[hi];
+      }
+      return null;
+   }
+   function laOpenAddTask() {
+      var bs = document.querySelectorAll('aside.fixed.left-0 button');
+      for (var oi = 0; oi < bs.length; oi++) {
+         if (/ADD NEW TASK|เพิ่ม Task/i.test(bs[oi].textContent || '')) { bs[oi].click(); return true; }
+      }
+      return false;
+   }
+   function laWireHero() {
+      var h = laHeroAddBtn();
+      if (!h || h.dataset.laWired) return;
+      h.dataset.laWired = '1';
+      h.addEventListener('click', function (ev) {
+         ev.preventDefault();
+         ev.stopImmediatePropagation();
+         laOpenAddTask();
+      }, true);
+   }
+   laWireHero();
+   setInterval(laWireHero, 700);
+   
    
    
    
