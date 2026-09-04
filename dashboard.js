@@ -1023,6 +1023,137 @@
    }
    setFavicon();
    setInterval(setFavicon, 3000);
+
+   // ===== 24. Dark Mode =====
+   // สีเกือบทั้งหมดมาจาก inline style ไม่ใช่คลาส จึงเขียนทับด้วย CSS ไม่ได้
+   // ต้องแปลงสีตอน React วาด — เก็บสีเน้นไว้ ทำเฉพาะพื้นสว่างกับตัวหนังสือเข้ม
+   function laHsl(c) {
+      var m = String(c).match(/#([0-9a-f]{3,8})/i), r, g, b;
+      if (m) {
+         var h0 = m[1];
+         if (h0.length === 3) h0 = h0.split('').map(function (x) { return x + x; }).join('');
+         r = parseInt(h0.slice(0, 2), 16); g = parseInt(h0.slice(2, 4), 16); b = parseInt(h0.slice(4, 6), 16);
+      } else {
+         m = String(c).match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+         if (!m) return null;
+         r = +m[1]; g = +m[2]; b = +m[3];
+      }
+      r /= 255; g /= 255; b /= 255;
+      var mx = Math.max(r, g, b), mn = Math.min(r, g, b), h = 0, s = 0, l = (mx + mn) / 2;
+      if (mx !== mn) {
+         var d = mx - mn;
+         s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+         h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+         h /= 6;
+      }
+      return { h: h * 360, s: s, l: l };
+   }
+   function laHS(h, s, l) { return 'hsl(' + h.toFixed(0) + ',' + (s * 100).toFixed(0) + '%,' + (l * 100).toFixed(0) + '%)'; }
+   function laDarkBg(c) {
+      var x = laHsl(c);
+      if (!x) return c;
+      if (x.s > 0.45 && x.l > 0.30 && x.l < 0.72) return c;
+      if (x.l > 0.82) return laHS(x.h, Math.min(x.s, 0.22), 0.13 + (1 - x.l) * 0.5);
+      if (x.l > 0.60) return laHS(x.h, Math.min(x.s, 0.32), 0.22);
+      return c;
+   }
+   function laDarkText(c) {
+      var x = laHsl(c);
+      if (!x) return c;
+      if (x.l < 0.35) return laHS(x.h, Math.min(x.s, 0.22), 0.88);
+      if (x.l < 0.62) return laHS(x.h, Math.min(x.s, 0.45), 0.72);
+      return c;
+   }
+   function laDarkBorder(c) {
+      var x = laHsl(c);
+      if (!x) return c;
+      return x.l > 0.70 ? laHS(x.h, Math.min(x.s, 0.22), 0.24) : c;
+   }
+   function laMapBg(v) {
+      var s = String(v);
+      if (/gradient/i.test(s)) {
+         var cols = s.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g) || [];
+         if (!cols.length) return s;
+         var L = 0, S = 0, n = 0;
+         cols.forEach(function (c) { var x = laHsl(c); if (x) { L += x.l; S += x.s; n++; } });
+         if (!n) return s;
+         if ((L / n) > 0.82 && (S / n) < 0.5) return s.replace(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g, laDarkBg);
+         return s;
+      }
+      return laDarkBg(s);
+   }
+
+   var DARK_ON = false;
+   try { DARK_ON = localStorage.getItem('la_dark') === '1'; } catch (err) {}
+   window.__laDark = DARK_ON;
+
+   if (React && !React.__laDarkHook) {
+      var prevCE5 = React.createElement;
+      React.createElement = function (type, props) {
+         var a = Array.prototype.slice.call(arguments);
+         if (window.__laDark && a[1] && a[1].style && typeof a[1].style === 'object') {
+            var s = a[1].style, ns = Object.assign({}, s), ch = false, v;
+            if (s.background) { v = laMapBg(s.background); if (v !== s.background) { ns.background = v; ch = true; } }
+            if (s.backgroundColor) { v = laMapBg(s.backgroundColor); if (v !== s.backgroundColor) { ns.backgroundColor = v; ch = true; } }
+            if (s.color) { v = laDarkText(s.color); if (v !== s.color) { ns.color = v; ch = true; } }
+            if (s.borderColor) { v = laDarkBorder(s.borderColor); if (v !== s.borderColor) { ns.borderColor = v; ch = true; } }
+            var bgv = ns.background || ns.backgroundColor;
+            if (bgv && ns.color && !/gradient/i.test(String(bgv))) {
+               var xb = laHsl(bgv), xc = laHsl(ns.color);
+               if (xb && xc && Math.abs(xb.l - xc.l) < 0.34) {
+                  ns.color = laHS(xc.h, Math.min(xc.s, 0.5), xb.l > 0.5 ? 0.14 : 0.88);
+                  ch = true;
+               }
+            }
+            if (ch) { var p = Object.assign({}, a[1]); p.style = ns; a[1] = p; }
+         }
+         return prevCE5.apply(this, a);
+      };
+      React.__laDarkHook = true;
+   }
+
+   var darkCss = document.createElement('style');
+   darkCss.id = 'la-dark-css';
+   darkCss.textContent = [
+      'body.la-dark{background:#0B1020 !important;color:#E2E8F0}',
+      'body.la-dark .bg-white{background:#151B2E !important}',
+      'body.la-dark aside.fixed.left-0{background:#151B2E !important}',
+      'body.la-dark aside.fixed.left-0 nav button{color:#CBD5E1 !important}',
+      'body.la-dark aside.fixed.left-0 nav button *{color:inherit !important}',
+      'body.la-dark .la-brand{color:#F1F5F9 !important}',
+      'body.la-dark aside.fixed.left-0 > div:nth-child(2) button{color:#E2E8F0 !important}',
+      'body.la-dark input,body.la-dark textarea,body.la-dark select{background:#1B2338 !important;color:#E2E8F0 !important;border-color:#2B3448 !important}',
+      'body.la-dark input::placeholder{color:#64748B !important}',
+      'body.la-dark h1,body.la-dark h2,body.la-dark h3{color:#F1F5F9 !important;-webkit-text-fill-color:#F1F5F9 !important;background-image:none !important}',
+      'body.la-dark .text-gray-900,body.la-dark .text-gray-800,body.la-dark .text-gray-700{color:#E2E8F0 !important}',
+      'body.la-dark .text-gray-500,body.la-dark .text-gray-400{color:#94A3B8 !important}',
+      'body.la-dark .border-t,body.la-dark .border-b,body.la-dark hr{border-color:#2B3448 !important}',
+      'body.la-dark .rounded-[28px] div{color:#5B21B6 !important}',
+      'body.la-dark .rounded-[28px] h2{color:#3B0764 !important;-webkit-text-fill-color:#3B0764 !important}',
+      'body.la-dark .rounded-[28px] button{color:#fff !important}',
+      '.la-theme{display:inline-flex;align-items:center;margin-left:6px;background:transparent;border:0;cursor:pointer;font-size:15px;line-height:1;padding:4px 6px;border-radius:8px}'
+      ].join('');
+   if (!document.getElementById('la-dark-css')) document.head.appendChild(darkCss);
+   if (DARK_ON) document.body.classList.add('la-dark');
+
+   // ปุ่มสลับโหมด — วางต่อจากปุ่ม TH / EN
+   function addThemeToggle() {
+      var box = document.querySelector('.la-lang');
+      if (!box || box.querySelector('.la-theme')) return;
+      var b = document.createElement('button');
+      b.className = 'la-theme';
+      b.type = 'button';
+      b.title = DARK_ON ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด';
+      b.textContent = DARK_ON ? '\u2600\uFE0F' : '\uD83C\uDF19';
+      b.onclick = function () {
+         try { localStorage.setItem('la_dark', DARK_ON ? '0' : '1'); } catch (err) {}
+         location.reload();
+      };
+      box.parentNode.insertBefore(b, box.nextSibling);
+   }
+   addThemeToggle();
+   setInterval(addThemeToggle, 900);
+   
    
    
    
