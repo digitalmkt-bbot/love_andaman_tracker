@@ -1160,10 +1160,10 @@
    var RP = { PAGE:'#161C2D', CARD:'#1C2338', BAR:'#131826', INPUT:'#232B42', BORDER:'#2A3350' };
    var RBG = {
       '#FFFFFF':RP.CARD, '#F2F4FA':RP.PAGE, '#F8FAFC':RP.PAGE, '#F1F5F9':RP.INPUT, '#E2E8F0':RP.BORDER,
-      '#EEF2FF':'#2B1550', '#E0E7FF':'#2B1550', '#F5F3FF':'#2B1550', '#FAF5FF':'#2B1550',
-      '#D1FAE5':'#14282B', '#F0FDF4':'#14282B',
-      '#FEF3C7':'#311F1B', '#FFF7ED':'#311F1B',
-      '#FFE4E6':'#33161F', '#FEF2F2':'#33161F', '#FCE7F3':'#33161F',
+            '#EEF2FF':'#2B1550', '#F5F3FF':'#2B1550', '#FAF5FF':'#2B1550',
+      '#F0FDF4':'#14282B', '#FFF7ED':'#311F1B',
+      '#FEF2F2':'#33161F', '#FCE7F3':'#33161F',
+      '#D1FAE5':RP.CARD, '#FEF3C7':RP.CARD, '#E0E7FF':RP.CARD, '#FFE4E6':RP.CARD,
       '#DBEAFE':'#152538', '#E0F2FE':'#152538'
    };
    var RFG = {
@@ -1229,11 +1229,11 @@
       'body.la-dark input,body.la-dark textarea,body.la-dark select{background:' + RP.INPUT + ' !important;color:#E9ECF5 !important;border-color:' + RP.BORDER + ' !important}',
       'body.la-dark input::placeholder{color:#6B7488 !important}',
       'body.la-dark h1,body.la-dark h2,body.la-dark h3,body.la-dark h1 *,body.la-dark h2 *,body.la-dark h3 *{color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;background-image:none !important}',
-      'body.la-dark .rounded-[28px].p-7{background:linear-gradient(115deg,#2C0E53 0%,#4C1D95 55%,#6D28D9 100%) !important}',
-      'body.la-dark .rounded-[28px].p-7 div{color:#C4B5FD !important}',
-      'body.la-dark .rounded-[28px].p-7 button{background:#FFFFFF !important;color:#2C0E53 !important}',
-      'body.la-dark .rounded-[28px].p-7 button span:last-child{background:#2C0E53 !important;color:#FFFFFF !important}',
-      'body.la-dark .rounded-[28px].p-6{background:' + RP.CARD + ' !important}',
+            'body.la-dark .rounded-\\[28px\\].p-7{background:linear-gradient(115deg,#2C0E53 0%,#4C1D95 55%,#6D28D9 100%) !important}',
+      'body.la-dark .rounded-\\[28px\\].p-7 div{color:#C4B5FD !important}',
+      'body.la-dark .rounded-\\[28px\\].p-7 button{background:#FFFFFF !important;color:#2C0E53 !important}',
+      'body.la-dark .rounded-\\[28px\\].p-7 button span:last-child{background:#2C0E53 !important;color:#FFFFFF !important}',
+      'body.la-dark .rounded-\\[28px\\].p-6{background:' + RP.CARD + ' !important}',
       'body.la-dark #la-login{background:' + RP.PAGE + ' !important}',
       'body.la-dark #la-login .card{background:' + RP.CARD + ' !important;border-color:' + RP.BORDER + ' !important}',
       'body.la-dark #la-login label,body.la-dark #la-login h1,body.la-dark #la-login p{color:#E9ECF5 !important}',
