@@ -1240,6 +1240,35 @@
       'body.la-dark #la-login .swap a{color:#9B7BFF !important}'
       ].join('');
    if (!document.getElementById('la-dark-ref')) document.head.appendChild(refCss);
+
+   // ===== 26. หัวข้อด้านบนตามหน้า + เอาขีดสองขีดออก =====
+   // เดิม h1 เขียนว่า Dashboard ตายตัว จึงค้างทุกหน้า
+   // อ่านชื่อหน้าจาก URL เพราะแน่นอนกว่าการไล่หาจาก DOM
+   function laPageName() {
+      var s = (location.hash || '#dashboard').slice(1);
+      var pair = null;
+      for (var vi = 0; vi < VIEW_SLUGS.length; vi++) if (VIEW_SLUGS[vi][0] === s) pair = VIEW_SLUGS[vi][1];
+      if (!pair) pair = VIEW_SLUGS[0][1];
+      var lang = 'th';
+      try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+      return lang === 'en' ? pair[0] : pair[1];
+   }
+   if (React && !React.__laTitleHook) {
+      var prevCE7 = React.createElement;
+      React.createElement = function (type, props) {
+         var a = Array.prototype.slice.call(arguments);
+         var cls = (a[1] && typeof a[1].className === 'string') ? a[1].className : '';
+         if ((type === 'h1' || type === 'h2') && cls.indexOf('text-2xl') !== -1) {
+            if (type === 'h1') return prevCE7(type, a[1], laPageName());
+            for (var ti = 2; ti < a.length; ti++) {
+               if (typeof a[ti] === 'string') a[ti] = a[ti].replace(/^\/\/\s*/, '');
+            }
+         }
+         return prevCE7.apply(this, a);
+      };
+      React.__laTitleHook = true;
+   }
+   
    
    
    
