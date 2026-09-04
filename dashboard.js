@@ -1153,6 +1153,94 @@
    }
    addThemeToggle();
    setInterval(addThemeToggle, 900);
+
+   // ===== 25. Dark Mode ชุดสีจาก Reference =====
+   // ชุดเดิมใช้สูตรคำนวณสี ผลออกมาหม่นเป็นสีน้ำตาลเขียว
+   // ชุดนี้อ่านค่าสีจากภาพ Reference ที่ลูกค้าส่งมา แล้วจับคู่ทีละสี
+   var RP = { PAGE:'#161C2D', CARD:'#1C2338', BAR:'#131826', INPUT:'#232B42', BORDER:'#2A3350' };
+   var RBG = {
+      '#FFFFFF':RP.CARD, '#F2F4FA':RP.PAGE, '#F8FAFC':RP.PAGE, '#F1F5F9':RP.INPUT, '#E2E8F0':RP.BORDER,
+      '#EEF2FF':'#2B1550', '#E0E7FF':'#2B1550', '#F5F3FF':'#2B1550', '#FAF5FF':'#2B1550',
+      '#D1FAE5':'#14282B', '#F0FDF4':'#14282B',
+      '#FEF3C7':'#311F1B', '#FFF7ED':'#311F1B',
+      '#FFE4E6':'#33161F', '#FEF2F2':'#33161F', '#FCE7F3':'#33161F',
+      '#DBEAFE':'#152538', '#E0F2FE':'#152538'
+   };
+   var RFG = {
+      '#0F1720':'#FFFFFF', '#111827':'#FFFFFF', '#1A1A1A':'#FFFFFF', '#000000':'#FFFFFF',
+      '#334155':'#C3CAD9', '#475569':'#A9B2C4', '#64748B':'#8A93A8', '#94A3B8':'#7E8799',
+      '#6366F1':'#9B7BFF', '#4F46E5':'#9B7BFF', '#6B73EB':'#9B7BFF',
+      '#047857':'#34D399', '#B45309':'#F5A524', '#BE123C':'#F45B69', '#0369A1':'#4A90E2'
+   };
+   function rUp(c) {
+      var m = String(c).match(/#([0-9a-fA-F]{6})/);
+      if (m) return ('#' + m[1]).toUpperCase();
+      var r = String(c).match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      if (!r) return null;
+      return '#' + [r[1], r[2], r[3]].map(function (x) { return (+x).toString(16).padStart(2, '0'); }).join('').toUpperCase();
+   }
+   function rLum(h) {
+      var n = parseInt(h.slice(1), 16);
+      return 0.2126 * ((n >> 16 & 255) / 255) + 0.7152 * ((n >> 8 & 255) / 255) + 0.0722 * ((n & 255) / 255);
+   }
+   function rBG(c) { var k = rUp(c); if (!k) return c; if (RBG[k]) return RBG[k]; return rLum(k) > 0.90 ? RP.CARD : c; }
+   function rFG(c) { var k = rUp(c); if (!k) return c; if (RFG[k]) return RFG[k]; return rLum(k) < 0.22 ? '#FFFFFF' : c; }
+   function rBD(c) { var k = rUp(c); if (!k) return c; return rLum(k) > 0.85 ? RP.BORDER : c; }
+   function rMBG(v) {
+      var s = String(v);
+      if (/gradient/i.test(s)) {
+         var cols = s.match(/#[0-9a-fA-F]{6}|rgba?\([^)]+\)/g) || [];
+         var li = 0;
+         cols.forEach(function (c) { var k = rUp(c); if (k && rLum(k) > 0.88) li++; });
+         if (cols.length && li === cols.length) return s.replace(/#[0-9a-fA-F]{6}|rgba?\([^)]+\)/g, rBG);
+         return s;
+      }
+      return rBG(s);
+   }
+
+   // ตัวดักนี้ทำงานทีหลัง จึงเขียนทับผลของชุดเก่า
+   if (React && !React.__laRefDark) {
+      var prevCE6 = React.createElement;
+      React.createElement = function (type, props) {
+         var a = Array.prototype.slice.call(arguments);
+         if (window.__laDark && a[1] && a[1].style && typeof a[1].style === 'object') {
+            var s = a[1].style, ns = Object.assign({}, s), ch = false, v;
+            if (s.background) { v = rMBG(s.background); if (v !== s.background) { ns.background = v; ch = true; } }
+            if (s.backgroundColor) { v = rMBG(s.backgroundColor); if (v !== s.backgroundColor) { ns.backgroundColor = v; ch = true; } }
+            if (s.color) { v = rFG(s.color); if (v !== s.color) { ns.color = v; ch = true; } }
+            if (s.borderColor) { v = rBD(s.borderColor); if (v !== s.borderColor) { ns.borderColor = v; ch = true; } }
+            if (ch) { var p = Object.assign({}, a[1]); p.style = ns; a[1] = p; }
+         }
+         return prevCE6.apply(this, a);
+      };
+      React.__laRefDark = true;
+   }
+
+   var refCss = document.createElement('style');
+   refCss.id = 'la-dark-ref';
+   refCss.textContent = [
+      'body.la-dark{background:' + RP.PAGE + ' !important;color:#E9ECF5}',
+      'body.la-dark .bg-white{background:' + RP.CARD + ' !important}',
+      'body.la-dark aside.fixed.left-0{background:' + RP.BAR + ' !important;border:1px solid ' + RP.BORDER + '}',
+      'body.la-dark aside.fixed.left-0 nav button{color:#8A93A8 !important}',
+      'body.la-dark aside.fixed.left-0 nav button *{color:inherit !important}',
+      'body.la-dark .la-brand{color:#FFFFFF !important}',
+      'body.la-dark aside.fixed.left-0 > div:nth-child(2) button{color:#C3CAD9 !important}',
+      'body.la-dark input,body.la-dark textarea,body.la-dark select{background:' + RP.INPUT + ' !important;color:#E9ECF5 !important;border-color:' + RP.BORDER + ' !important}',
+      'body.la-dark input::placeholder{color:#6B7488 !important}',
+      'body.la-dark h1,body.la-dark h2,body.la-dark h3,body.la-dark h1 *,body.la-dark h2 *,body.la-dark h3 *{color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;background-image:none !important}',
+      'body.la-dark .rounded-[28px].p-7{background:linear-gradient(115deg,#2C0E53 0%,#4C1D95 55%,#6D28D9 100%) !important}',
+      'body.la-dark .rounded-[28px].p-7 div{color:#C4B5FD !important}',
+      'body.la-dark .rounded-[28px].p-7 button{background:#FFFFFF !important;color:#2C0E53 !important}',
+      'body.la-dark .rounded-[28px].p-7 button span:last-child{background:#2C0E53 !important;color:#FFFFFF !important}',
+      'body.la-dark .rounded-[28px].p-6{background:' + RP.CARD + ' !important}',
+      'body.la-dark #la-login{background:' + RP.PAGE + ' !important}',
+      'body.la-dark #la-login .card{background:' + RP.CARD + ' !important;border-color:' + RP.BORDER + ' !important}',
+      'body.la-dark #la-login label,body.la-dark #la-login h1,body.la-dark #la-login p{color:#E9ECF5 !important}',
+      'body.la-dark #la-login .swap a{color:#9B7BFF !important}'
+      ].join('');
+   if (!document.getElementById('la-dark-ref')) document.head.appendChild(refCss);
+   
    
    
    
