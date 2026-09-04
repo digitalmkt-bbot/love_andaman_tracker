@@ -997,6 +997,33 @@
       };
       React.__laSummaryPhoto = true;
    }
+
+   // ===== 23. Favicon — โลโก้ดอกไม้ชุดเดียวกับในระบบ =====
+   // เดิมไม่มีเลย แท็บจึงเป็นไอคอนเปล่าของเบราว์เซอร์ ใช้ SVG ฝังในโค้ดจึงไม่ต้องเพิ่มไฟล์
+   var faviconSvg = [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">',
+      '<circle cx="50" cy="28" r="19" fill="#8B5CF6"/>',
+      '<circle cx="71" cy="43" r="19" fill="#EC4899"/>',
+      '<circle cx="63" cy="69" r="19" fill="#F472B6"/>',
+      '<circle cx="37" cy="69" r="19" fill="#38BDF8"/>',
+      '<circle cx="29" cy="43" r="19" fill="#A78BFA"/>',
+      '<circle cx="50" cy="50" r="13" fill="#F5F3FF"/>',
+      '</svg>'
+      ].join('');
+   function setFavicon() {
+      if (document.getElementById('la-favicon')) return;
+      var old = document.querySelectorAll("link[rel*='icon']");
+      for (var fi = 0; fi < old.length; fi++) old[fi].parentNode.removeChild(old[fi]);
+      var lk = document.createElement('link');
+      lk.id = 'la-favicon';
+      lk.rel = 'icon';
+      lk.type = 'image/svg+xml';
+      lk.href = 'data:image/svg+xml,' + encodeURIComponent(faviconSvg);
+      document.head.appendChild(lk);
+   }
+   setFavicon();
+   setInterval(setFavicon, 3000);
+   
    
    
    
