@@ -1268,6 +1268,27 @@
       };
       React.__laTitleHook = true;
    }
+
+   // ===== 27. พื้นหลังโหมดมืด 4 ระดับตาม Reference =====
+   // เดิมตั้งสีให้แค่ body — html กับ main จึงเป็นดำสนิท กลายเป็นบล็อกดำทึบ
+   // Ref แยก 4 ระดับ: กรอบนอก → แถบเมนู → พื้นเนื้อหา → การ์ด
+   var bgCss = document.createElement('style');
+   bgCss.id = 'la-dark-bg';
+   bgCss.textContent = [
+      'html.la-dark-root{background:#101421 !important}',
+      'body.la-dark{background:' + RP.PAGE + ' !important}',
+      'body.la-dark main{background:' + RP.PAGE + ' !important}',
+      'body.la-dark [class*="lg:ml-"]{background:' + RP.PAGE + ' !important}',
+      'body.la-dark main > div{background:transparent !important}'
+      ].join('');
+   if (!document.getElementById('la-dark-bg')) document.head.appendChild(bgCss);
+   function syncDarkRoot() {
+      if (window.__laDark) document.documentElement.classList.add('la-dark-root');
+      else document.documentElement.classList.remove('la-dark-root');
+   }
+   syncDarkRoot();
+   setInterval(syncDarkRoot, 1500);
+   
    
    
    
