@@ -1288,6 +1288,15 @@
    }
    syncDarkRoot();
    setInterval(syncDarkRoot, 1500);
+
+   // ===== 28. ซ่อนหัวข้อด้านบน เหลือแค่หัวข้อในหน้า =====
+   // ชื่อหน้าขึ้นซ้ำสองที่ — เอาอันบนออก เหลืออันล่างที่มีคำอธิบายใต้
+   // หน้า Dashboard ไม่มีหัวข้อล่าง แต่การ์ดต้อนรับทำหน้าที่แทนอยู่แล้ว
+   var h1Css = document.createElement('style');
+   h1Css.id = 'la-hide-h1';
+   h1Css.textContent = 'h1.text-2xl{display:none !important}';
+   if (!document.getElementById('la-hide-h1')) document.head.appendChild(h1Css);
+   
    
    
    
