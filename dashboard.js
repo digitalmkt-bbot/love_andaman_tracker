@@ -1139,7 +1139,7 @@
    // ปุ่มสลับโหมด — วางต่อจากปุ่ม TH / EN
    function addThemeToggle() {
       var box = document.querySelector('.la-lang');
-      if (!box || box.querySelector('.la-theme')) return;
+            if (!box || document.querySelector('.la-theme')) return;
       var b = document.createElement('button');
       b.className = 'la-theme';
       b.type = 'button';
