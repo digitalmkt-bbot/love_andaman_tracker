@@ -1296,6 +1296,102 @@
    h1Css.id = 'la-hide-h1';
    h1Css.textContent = 'h1.text-2xl{display:none !important}';
    if (!document.getElementById('la-hide-h1')) document.head.appendChild(h1Css);
+
+   // ===== 29. แปลข้อความระบบที่เป็นไทยตกค้างในโหมดอังกฤษ =====
+   // ข้อความเหล่านี้มีตัวเลขปน จึงไม่อยู่ในตารางคำแปลเดิม
+   // กฎผูกหัวท้ายแน่น เพื่อไม่ให้ไปโดนชื่องานหรือข้อความโพสต์จริง
+   var PAT_RULES = [
+      [/^(\d+)\/(\d+)\s*เสร็จ$/, function (m) { return m[1] + '/' + m[2] + ' done'; }],
+      [/^(\d+)\s*รายการ$/, function (m) { return m[1] + ' items'; }],
+      [/^(\d+)\s*ผลลัพธ์$/, function (m) { return m[1] + ' results'; }],
+      [/^(\d+)\s*งานที่ต้องเร่งทำ$/, function (m) { return m[1] + ' tasks need attention'; }],
+      [/^อีก\s*(\d+)\s*วัน$/, function (m) { return m[1] + ' days left'; }],
+      [/^งานใกล้\s*Due Date\s*(\d+)\s*วัน$/, function (m) { return 'Due within ' + m[1] + ' days'; }],
+      [/^ทั้งหมดในโปรเจกต์:\s*(\d+)\s*รายการ$/, function (m) { return 'All in project: ' + m[1] + ' items'; }]
+      ];
+   var PAT_FRAG = {
+      'พรุ่งนี้': 'Tomorrow',
+      'วันนี้': 'Today',
+      'เมื่อวาน': 'Yesterday',
+      'ความคืบหน้า': 'Progress',
+      ' งานที่ต้องเร่งทำ': ' tasks need attention',
+      ' รายการ': ' items',
+      ' ผลลัพธ์': ' results',
+      ' รายการในโปรเจกต์นี้': ' items in this project',
+      ' เสร็จ': ' done',
+      'ทั้งหมดในโปรเจกต์: ': 'All in project: ',
+      'ตารางวางแผน Social Media — ': 'Social media plan — ',
+      'ติดตาม Tasks + Planning Posts ทั้งหมด · ': 'All Tasks + Planning Posts · ',
+      'ประวัติการทำงานทั้งหมด — โปรเจกต์ ': 'All work history — project ',
+      'KPI & ผลงานแต่ละคน · ': 'KPI & individual results · ',
+      ' รายการ (ทั้งหมด)': ' items (all)',
+      ' งาน · ': ' tasks · ',
+      '% ของทีม': '% of team',
+      ' members · จัดการ': ' members · Manage',
+      'จัดการ': 'Manage',
+      'วัดจากงานที่ทำเสร็จ (โพสต์ Published + Task/Job เสร็จ)': 'Based on completed work (Published posts + finished Tasks/Jobs)'
+   };
+   function laPatTr(s) {
+      if (typeof s !== 'string') return null;
+      var t = s.trim();
+      for (var pi = 0; pi < PAT_RULES.length; pi++) {
+         var m = t.match(PAT_RULES[pi][0]);
+         if (m) return PAT_RULES[pi][1](m);
+      }
+      if (PAT_FRAG[s]) return PAT_FRAG[s];
+      if (PAT_FRAG[t]) return PAT_FRAG[t];
+      return null;
+   }
+
+   if (React && !React.__laPatHook) {
+      var prevCE8 = React.createElement;
+      React.createElement = function (type, props) {
+         var a = Array.prototype.slice.call(arguments);
+         var lang = 'th';
+         try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+         if (lang === 'en') {
+            for (var pj = 2; pj < a.length; pj++) {
+               if (typeof a[pj] === 'string') {
+                  var nv = laPatTr(a[pj]);
+                  if (nv) a[pj] = nv;
+               }
+            }
+         }
+         return prevCE8.apply(this, a);
+      };
+      React.__laPatHook = true;
+   }
+
+   // ===== 30. โลโก้ช่องทาง + เพิ่ม Website =====
+   // วาดโลโก้เองเป็น SVG ไม่ดึงไฟล์จากภายนอก จึงไม่ติดเรื่องลิขสิทธิ์
+   // หมายเหตุ: ต้องเพิ่ม Website ใน CHECK constraint ของตาราง posts ด้วย (ทำแล้ว)
+   if (window.CHANNELS && !window.CHANNELS.some(function (c) { return c && c.name === 'Website'; })) {
+      window.CHANNELS.push({ name: 'Website', color: '#0F766E', bg: '#CCFBF1' });
+   }
+   var CH_LOGO = {
+      'Facebook': '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="#1877F2" d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.7-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.7l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg>',
+      'Instagram': '<svg viewBox="0 0 24 24" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="#E1306C" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="#E1306C" stroke-width="2"/><circle cx="17.2" cy="6.8" r="1.2" fill="#E1306C"/></svg>',
+      'TikTok': '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="#111" d="M16.5 3c.4 1.9 1.6 3.3 3.5 3.6v2.6c-1.3.1-2.5-.3-3.6-1v6.2c0 4-3.4 6.6-7 5.4-2.3-.8-3.6-3-3.4-5.4.2-2.4 2.3-4.3 4.8-4.3.3 0 .5 0 .8.1v2.7c-.3-.1-.6-.1-.9-.1-1.2 0-2.2 1-2.2 2.2s1 2.2 2.2 2.2c1.3 0 2.3-1 2.3-2.4V3h3.5z"/></svg>',
+      'Lemon 8': '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="9" fill="#FFC800"/><path fill="#fff" d="M12 6.5c1.6 0 2.8 1 2.8 2.4 0 .9-.5 1.6-1.3 2 .9.4 1.5 1.2 1.5 2.2 0 1.6-1.3 2.7-3 2.7s-3-1.1-3-2.7c0-1 .6-1.8 1.5-2.2-.8-.4-1.3-1.1-1.3-2 0-1.4 1.2-2.4 2.8-2.4z"/></svg>',
+      'YouTube': '<svg viewBox="0 0 24 24" width="14" height="14"><rect x="2.5" y="5.5" width="19" height="13" rx="4" fill="#FF0000"/><path fill="#fff" d="M10 9.2l5 2.8-5 2.8z"/></svg>',
+      'Website': '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="9" fill="none" stroke="#0F766E" stroke-width="2"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="#0F766E" stroke-width="2"/><path stroke="#0F766E" stroke-width="2" d="M3.2 9.5h17.6M3.2 14.5h17.6"/></svg>'
+   };
+   function addChannelLogos() {
+      var bs = document.querySelectorAll('button');
+      for (var bi = 0; bi < bs.length; bi++) {
+         var b = bs[bi];
+         var t = (b.textContent || '').trim();
+         if (!CH_LOGO[t] || b.dataset.laChLogo) continue;
+         b.dataset.laChLogo = '1';
+         b.style.display = 'inline-flex';
+         b.style.alignItems = 'center';
+         b.style.gap = '5px';
+         b.insertAdjacentHTML('afterbegin', CH_LOGO[t]);
+      }
+   }
+   addChannelLogos();
+   setInterval(addChannelLogos, 700);
+   
    
    
    
