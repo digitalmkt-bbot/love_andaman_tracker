@@ -1391,6 +1391,33 @@
    }
    addChannelLogos();
    setInterval(addChannelLogos, 700);
+
+   // ===== 31. ตัวอ่านสีรองรับชื่อสีและรหัส 3 หลัก =====
+   // ตัวเดิมอ่านได้แค่ #RRGGBB กับ rgb() — พอเจอ background:'white' จึงอ่านไม่ออก
+   // ผลคือพื้นยังขาวแต่ตัวหนังสือถูกทำให้สว่าง — ขาวบนขาว อ่านไม่ออก
+   var NAMED_COLORS = {
+      white: '#FFFFFF', black: '#000000', red: '#FF0000', gray: '#808080',
+      grey: '#808080', silver: '#C0C0C0', whitesmoke: '#F5F5F5', ivory: '#FFFFF0',
+      snow: '#FFFAFA', linen: '#FAF0E6'
+   };
+   function laColorKey(c) {
+      if (typeof c !== 'string') return null;
+      var s = c.trim().toLowerCase();
+      if (s === 'transparent' || s === 'inherit' || s === 'currentcolor') return null;
+      if (NAMED_COLORS[s]) return NAMED_COLORS[s];
+      var m = s.match(/#([0-9a-f]{6})/);
+      if (m) return ('#' + m[1]).toUpperCase();
+      m = s.match(/#([0-9a-f]{3})(?![0-9a-f])/);
+      if (m) {
+         var h = m[1];
+         return ('#' + h[0] + h[0] + h[1] + h[1] + h[2] + h[2]).toUpperCase();
+      }
+      m = s.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      if (m) return '#' + [m[1], m[2], m[3]].map(function (x) { return (+x).toString(16).padStart(2, '0'); }).join('').toUpperCase();
+      return null;
+   }
+   rUp = laColorKey;
+   
    
    
    
