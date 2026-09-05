@@ -1643,12 +1643,17 @@
       if (nav.length < 6) return false;
       var btn = nav[VIEW_INDEX[s]];
       if (!btn) return false;
-            if (window.__laViewRestored) return true;
-            window.__laViewRestored = true;
+                  var h2s = document.querySelectorAll('h2');
+                  var want = (btn.textContent || '').replace(/[0-9]+/g, '').trim();
+      for (var hh = 0; hh < h2s.length; hh++) {
+         if (String(h2s[hh].className).indexOf('text-2xl') === -1) continue;
+         if ((h2s[hh].textContent || '').trim() === want) return true;
+         break;
+      }
       navSuppress = true;
       btn.click();
       setTimeout(function () { navSuppress = false; }, 400);
-      return true;
+            return false;
    }
    var restoreTimer = setInterval(function () {
       if (document.querySelector('#la-login')) { clearInterval(restoreTimer); return; }
