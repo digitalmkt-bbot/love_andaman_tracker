@@ -1725,7 +1725,7 @@
       if (rvDone) return;
       rvTicks++;
       if (rvTicks > 120) { rvDone = true; return; }
-      if (document.querySelector('#la-login')) { rvDone = true; return; }
+            if (document.querySelector('#la-login')) return;
       var s = (location.hash || '').slice(1);
       if (!(s in VIEW_INDEX) || s === 'dashboard') { rvDone = true; return; }
       var nav = document.querySelectorAll('aside.fixed.left-0 nav button');
