@@ -1897,6 +1897,23 @@ function laSaveBrand() {
 }
 setInterval(laSaveBrand, 2000);
 
+// ===== 47. จำชื่อโปรเจกต์ กัน "Marketing Dept." เด้ง =====
+// ปัญหาเดียวกับชื่อบริษัท — แอปแสดงค่าที่เขียนตายตัวก่อน แล้วค่อยดึงชื่อจริงมาทับ
+function laSaveProjectName() {
+   var bs = document.querySelectorAll('aside.fixed.left-0 button');
+   for (var i = 0; i < bs.length; i++) {
+      var t = (bs[i].textContent || '').trim();
+      if (!t || t.length > 40) continue;
+      if (t === 'Marketing Dept.') continue;
+      if (String(bs[i].className).indexOf('rounded-2xl') === -1) continue;
+      try {
+         if (localStorage.getItem('la_project_name') !== t) localStorage.setItem('la_project_name', t);
+      } catch (err) {}
+      return;
+   }
+}
+setInterval(laSaveProjectName, 2000);
+
 
 // ===== 44. เปิดหน้าหลังแปลภาษาเสร็จ =====
 // index.html ซ่อน body ไว้กันเห็นภาษาผิดแวบ — ตรงนี้คือจุดที่เปิดคืน
