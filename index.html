@@ -11,6 +11,12 @@
 
     <!-- CSS สำเร็จรูป โหลดก่อน Tailwind CDN เพื่อให้หน้าแสดงผลได้แม้ CDN ทำงานไม่สำเร็จ (เช่นบนมือถือ) -->
     <link rel="stylesheet" href="styles.css" />
+
+    <!-- ซ่อนหน้าไว้จนกว่า dashboard.js จะแปลภาษาเสร็จ -->
+    <!-- เดิมแอปวาดหน้าเป็นไทยก่อน แล้วค่อยสลับเป็นอังกฤษ จึงเห็นเด้ง -->
+    <!-- ถ้า dashboard.js พัง ตัวจับเวลาจะเปิดหน้าให้เองใน 3 วินาที -->
+    <style id="la-boot-hide">body{visibility:hidden}</style>
+    <script>setTimeout(function(){var s=document.getElementById('la-boot-hide'); if(s&&s.parentNode) s.parentNode.removeChild(s);},3000);</script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- React + Babel -->
