@@ -161,7 +161,7 @@
          var t = d.textContent || '';
          if (t.length < 40 && /Team/.test(t) && d.children.length <= 3) {
             d.dataset.laLogo = '1';
-            d.innerHTML = LOGO_SVG + '<span class="la-brand">Marketing Team</span>';
+                        d.innerHTML = LOGO_SVG + '<span class="la-brand">' + laCachedBrand() + '</span>';
             return true;
          }
       }
@@ -228,7 +228,7 @@
          var t = d.textContent || '';
                      if (t.length < 40 && /Team/.test(t) && d.children.length <= 3) {
             d.dataset.laLogo = '1';
-            d.innerHTML = LOGO_SVG + '<span class="la-brand">Marketing Team</span>';
+                           d.innerHTML = LOGO_SVG + '<span class="la-brand">' + laCachedBrand() + '</span>';
             break;
          }
       }
@@ -1864,3 +1864,25 @@
    
 
 })();
+
+
+// ===== 43. กันชื่อ "Marketing Team" เด้งตอนโหลด =====
+// โค้ดเขียนชื่อชั่วคราวลงก่อน แล้วค่อยดึงชื่อจริงจาก API มาทับ
+// จึงเห็นชื่อผิดแวบหนึ่ง — แก้โดยจำชื่อไว้ในเครื่อง ใช้ได้ทันทีตั้งแต่วาดครั้งแรก
+function laCachedBrand() {
+   try {
+      var c = localStorage.getItem('la_brand');
+      if (c) return c;
+   } catch (err) {}
+   return 'Marketing Team';
+}
+function laSaveBrand() {
+      var el = document.querySelector('[data-la-logo] .la-brand');
+      if (!el) return;
+      var n = (el.textContent || '').trim();
+      if (!n || n === 'Marketing Team') return;
+      try {
+               if (localStorage.getItem('la_brand') !== n) localStorage.setItem('la_brand', n);
+      } catch (err) {}
+}
+setInterval(laSaveBrand, 2000);
