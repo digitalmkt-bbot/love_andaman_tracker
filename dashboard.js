@@ -1632,7 +1632,24 @@
          }
       });
    }
-   setInterval(laAddOptButtons, 800);
+      // เดิมวนตรวจทุก 0.8 วินาที — พอ React วาดใหม่ปุ่มหาย ต้องรอถึงรอบถัดไปจึงกลับมา จึงกระตุกและขึ้นช้า
+      // ตอนนี้เฝ้าดูการเปลี่ยนแปลง แล้วใส่ปุ่มคืนทันทีในเฟรมเดียวกัน
+      function laSyncOptButtons() {
+               laAddOptButtons();
+               if (typeof laAddTaskCatButton === 'function') laAddTaskCatButton();
+               if (typeof laStyleOptButtons === 'function') laStyleOptButtons();
+      }
+      var optQueued = false;
+      function laQueueOpt() {
+               if (optQueued) return;
+               optQueued = true;
+               requestAnimationFrame(function () { optQueued = false; laSyncOptButtons(); });
+      }
+      try {
+               new MutationObserver(laQueueOpt).observe(document.body, { childList: true, subtree: true });
+      } catch (err) {}
+      laSyncOptButtons();
+      setInterval(laSyncOptButtons, 2000);
 
    // ===== 37. เปิดหน้าเดิมตาม URL =====
    // แอปเริ่มที่หน้าภาพรวมเสมอ ไม่สนใจ hash ใน URL
@@ -1726,7 +1743,7 @@
                   if (b.dataset.laCss !== css) { b.style.cssText = css; b.dataset.laCss = css; }
       });
    }
-   setInterval(function () { laAddTaskCatButton(); laStyleOptButtons(); }, 700);
+      // ตัวนี้ถูกแทนด้วย laSyncOptButtons ที่ทำงานตามการเปลี่ยนแปลงจริงแล้ว
 
    // ===== 39. กู้หน้าตาม URL — รอจนแอปพร้อมจริง =====
    // ส่วนที่ 37 กดเมนูตั้งแต่แอปยังไม่พร้อม คลิกจึงไม่ติด แล้วยอมแพ้ก่อน
