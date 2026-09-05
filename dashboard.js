@@ -1895,3 +1895,8 @@ function laReveal() {
    if (s && s.parentNode) s.parentNode.removeChild(s);
 }
 setTimeout(laReveal, 400);
+
+
+// ===== 45. เรียกหน้าโหลดให้เฟดออกหลังแปลภาษาเสร็จ =====
+// index.html มีหน้าโหลดพร้อมโลโก้ แทนหน้าขาวเปล่าแบบเดิม
+if (typeof window.__laReveal === 'function') setTimeout(window.__laReveal, 450);
