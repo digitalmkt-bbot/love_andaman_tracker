@@ -1744,6 +1744,49 @@
       setTimeout(function () { navSuppress = false; }, 300);
    }
    setInterval(laRestoreView2, 1000);
+
+   // ===== 40. กู้หน้าตาม URL — เรียกฟังก์ชันเปลี่ยนหน้าของแอปตรง =====
+   // การกดปุ่มด้วยโค้ดติดบ้างไม่ติดบ้าง (race กับจังหวะที่ React ผูก handler)
+   // จึงดักเก็บ onClick ของแต่ละเมนูไว้ตอนวาด แล้วเรียกตรงๆ แทน
+   window.__laNavGo = {};
+   var prevNavItem2 = window.NavItem;
+   window.NavItem = function (p) {
+      try {
+         var sl = slugOfLabel(p.label);
+         if (sl && p.onClick) window.__laNavGo[sl] = p.onClick;
+      } catch (err) {}
+      return prevNavItem2(p);
+   };
+   var goTicks = 0;
+   var goDone = false;
+   function laGoHashDirect() {
+      if (goDone) return;
+      goTicks++;
+      if (goTicks > 90) { goDone = true; return; }
+      if (document.querySelector('#la-login')) return;
+      var s = (location.hash || '').slice(1);
+      if (!(s in VIEW_INDEX) || s === 'dashboard') { goDone = true; return; }
+      var want = null;
+      for (var vi = 0; vi < VIEW_SLUGS.length; vi++) {
+         if (VIEW_SLUGS[vi][0] === s) want = VIEW_SLUGS[vi][1];
+      }
+      var lang = 'th';
+      try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+      var wantTitle = want ? (lang === 'en' ? want[0] : want[1]) : null;
+      var h2s = document.querySelectorAll('h2');
+      for (var i = 0; i < h2s.length; i++) {
+         if (String(h2s[i].className).indexOf('text-2xl') === -1) continue;
+         if (wantTitle && (h2s[i].textContent || '').trim() === wantTitle) { goDone = true; return; }
+         break;
+      }
+      var fn = window.__laNavGo[s];
+      if (typeof fn !== 'function') return;
+      navSuppress = true;
+      try { fn(); } catch (err) {}
+      setTimeout(function () { navSuppress = false; }, 300);
+   }
+   setInterval(laGoHashDirect, 700);
+   
    
    
    
