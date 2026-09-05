@@ -18,6 +18,9 @@
  * ────────────────────────────────────────────────────────────
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -51,6 +54,46 @@ const pool = new Pool({
   ssl: /railway|supabase|amazonaws/.test(process.env.DATABASE_URL || '')
     ? { rejectUnauthorized: false } : undefined,
 });
+
+/* ── รัน migration ตอนบูต ────────────────────────────────────
+   Postgres ของ Railway ไม่เปิดให้ต่อจากข้างนอก (ไม่มี TCP proxy) จะรันด้วยมือ
+   ต้องเปิดฐานข้อมูลออกอินเทอร์เน็ตก่อน ซึ่งไม่คุ้มความเสี่ยง
+   service นี้อยู่ในเครือข่ายเดียวกับฐานข้อมูลอยู่แล้ว จึงให้รันแทน
+
+   ทุกไฟล์เขียนให้รันซ้ำได้ และจดไว้ว่ารันอะไรไปแล้วใน schema_migrations
+   ตั้ง RUN_MIGRATIONS=0 เพื่อปิด */
+async function migrate() {
+  if (process.env.RUN_MIGRATIONS === '0') return console.log('⏭  ข้าม migration (RUN_MIGRATIONS=0)');
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+  let files;
+  try { files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort(); }
+  catch { return console.log('⏭  ไม่พบโฟลเดอร์ migrations'); }
+
+  const client = await pool.connect();
+  try {
+    await client.query('CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
+    // กันสองอินสแตนซ์รันชนกันตอน deploy พร้อมกัน
+    await client.query('SELECT pg_advisory_lock(727001)');
+    const { rows } = await client.query('SELECT name FROM schema_migrations');
+    const done = new Set(rows.map(r => r.name));
+    for (const f of files) {
+      if (done.has(f)) { console.log(`✓  ${f} — รันไปแล้ว`); continue; }
+      try {
+        await client.query(fs.readFileSync(path.join(dir, f), 'utf8'));
+        await client.query('INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING', [f]);
+        console.log(`✅ ${f} — รันสำเร็จ`);
+      } catch (e) {
+        // ไม่ล้มทั้ง service เพราะการล็อกอินของลูกค้าต้องใช้ได้ต่อ
+        console.error(`❌ ${f} — ล้มเหลว: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.error('❌ migration เริ่มไม่ได้:', e.message);
+  } finally {
+    await client.query('SELECT pg_advisory_unlock(727001)').catch(() => {});
+    client.release();
+  }
+}
 
 const app = express();
 app.set('trust proxy', true);
@@ -528,4 +571,5 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'ระบบขัดข้อง' });
 });
 
+await migrate();
 app.listen(PORT, () => console.log(`auth service listening on ${PORT}`));
