@@ -1628,6 +1628,32 @@
       });
    }
    setInterval(laAddOptButtons, 800);
+
+   // ===== 37. เปิดหน้าเดิมตาม URL =====
+   // แอปเริ่มที่หน้าภาพรวมเสมอ ไม่สนใจ hash ใน URL
+   // ตอนสลับภาษา/โหมดมืด ระบบรีโหลด จึงเด้งกลับหน้าแรกทุกครั้ง
+   var VIEW_INDEX = { dashboard: 0, tracking: 1, planning: 2, pr: 3, report: 4, history: 5 };
+   var restoreTries = 0;
+   function laRestoreView() {
+      restoreTries++;
+      if (restoreTries > 30) return true;
+      var s = (location.hash || '').slice(1);
+      if (!(s in VIEW_INDEX) || s === 'dashboard') return true;
+      var nav = document.querySelectorAll('aside.fixed.left-0 nav button');
+      if (nav.length < 6) return false;
+      var btn = nav[VIEW_INDEX[s]];
+      if (!btn) return false;
+      if (getComputedStyle(btn).backgroundColor !== 'rgba(0, 0, 0, 0)') return true;
+      navSuppress = true;
+      btn.click();
+      setTimeout(function () { navSuppress = false; }, 400);
+      return true;
+   }
+   var restoreTimer = setInterval(function () {
+      if (document.querySelector('#la-login')) { clearInterval(restoreTimer); return; }
+      if (laRestoreView()) clearInterval(restoreTimer);
+   }, 400);
+   
    
    
    
