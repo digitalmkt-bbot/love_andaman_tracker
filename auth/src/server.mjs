@@ -473,11 +473,19 @@ app.post('/orders/:id/slip', auth, slipBody, async (req, res) => {
   if (img.length > 700_000)
     return res.status(413).json({ error: 'รูปใหญ่เกินไป ลองถ่ายใหม่หรือย่อขนาดก่อน' });
 
+  /* ชื่อผู้โอนช่วยจับคู่เงินเข้ากับออเดอร์ เบอร์ไว้ถามกลับตอนสลิปมีปัญหา */
+  const payer = String(req.body?.payer_name || '').trim().slice(0, 100);
+  const contact = String(req.body?.contact || '').trim().slice(0, 100);
+  if (payer.length < 2)
+    return res.status(400).json({ error: 'กรุณากรอกชื่อผู้โอน' });
+  if (!/^[0-9+\-() ]{8,}$/.test(contact) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact))
+    return res.status(400).json({ error: 'กรุณากรอกเบอร์โทรหรืออีเมลให้ถูกต้อง' });
+
   try {
     const { rowCount } = await pool.query(
-      `UPDATE orders SET slip_image = $1, status = 'checking'
+      `UPDATE orders SET slip_image = $1, status = 'checking', payer_name = $4, contact = $5
         WHERE id = $2 AND org_id = $3 AND status IN ('waiting','checking')`,
-      [img, req.params.id, req.claims.org_id]);
+      [img, req.params.id, req.claims.org_id, payer, contact]);
     if (!rowCount) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้ หรือตรวจสอบเสร็จแล้ว' });
     res.json({ ok: true, status: 'checking' });
   } catch (e) {
@@ -503,6 +511,7 @@ app.get('/admin/orders', adminOnly, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT o.id, o.org_id, o.plan, o.amount, o.status, o.note, o.slip_image,
+              o.payer_name, o.contact,
               o.created_at, o.paid_at, g.code AS org_code, g.name AS org_name
          FROM orders o JOIN orgs g ON g.id = o.org_id
         WHERE ($1 = 'all' OR o.status = $1)

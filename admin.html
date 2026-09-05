@@ -58,6 +58,11 @@
   .msg.ok{background:var(--okbg);color:var(--ok)}
   .empty{color:var(--ink3);text-align:center;padding:50px 20px}
   .hint{color:var(--ink3);font-size:12.5px;margin-top:6px}
+  .payer{font-size:13.5px;color:var(--ink2);margin:6px 0 0}
+  .payer b{color:var(--ink)}
+  .payer a{color:var(--accent);text-decoration:none}
+  .payer a:hover{text-decoration:underline}
+  .payer.none{color:var(--ink3);font-style:italic}
 </style>
 </head>
 <body>
@@ -141,6 +146,10 @@
           '<p class="who">' + esc(o.org_name) + '<span class="pill ' + esc(o.status) + '">' + (LABEL[o.status] || o.status) + '</span></p>' +
           '<p class="meta mono">' + esc(o.org_code) + ' · ' + esc(o.id) + ' · ' + when(o.created_at) + '</p>' +
           '<p class="amt">' + baht(o.amount) + ' ฿ <small>แพ็กเกจ' + (PLAN[o.plan] || esc(o.plan)) + '</small></p>' +
+          (o.payer_name || o.contact
+            ? '<p class="payer">โอนโดย <b>' + esc(o.payer_name || '—') + '</b>' +
+              (o.contact ? ' · <a href="tel:' + esc(o.contact) + '">' + esc(o.contact) + '</a>' : '') + '</p>'
+            : '<p class="payer none">ยังไม่ได้กรอกชื่อผู้โอน</p>') +
           acts +
         '</div></div>';
     }).join('');
