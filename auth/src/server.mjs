@@ -67,7 +67,8 @@ async function migrate() {
   const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
   let files;
   try { files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort(); }
-  catch { return console.log('⏭  ไม่พบโฟลเดอร์ migrations'); }
+  catch { return console.log(`⏭  ไม่พบโฟลเดอร์ migrations ที่ ${dir}`); }
+  console.log(`🗂  migrations ${files.length} ไฟล์ ที่ ${dir}`);
 
   const client = await pool.connect();
   try {
