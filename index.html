@@ -666,7 +666,7 @@ var PROJECTS_KEY = 'projects-list-v1';
 var CURRENT_PROJECT_KEY = 'current-project-id-v1';
 var DEFAULT_PROJECT = {
   id: 'p_default',
-  name: 'Marketing Dept.',
+    name: (function(){ try { return localStorage.getItem('la_project_name') || 'Marketing Dept.'; } catch (e) { return 'Marketing Dept.'; } })(),
   color: '#1A1A1A'
 };
 var newProjectId = function newProjectId() {
