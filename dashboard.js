@@ -1643,7 +1643,8 @@
       if (nav.length < 6) return false;
       var btn = nav[VIEW_INDEX[s]];
       if (!btn) return false;
-      if (getComputedStyle(btn).backgroundColor !== 'rgba(0, 0, 0, 0)') return true;
+            if (window.__laViewRestored) return true;
+            window.__laViewRestored = true;
       navSuppress = true;
       btn.click();
       setTimeout(function () { navSuppress = false; }, 400);
