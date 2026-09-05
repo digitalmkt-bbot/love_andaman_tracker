@@ -1635,12 +1635,13 @@
    var VIEW_INDEX = { dashboard: 0, tracking: 1, planning: 2, pr: 3, report: 4, history: 5 };
    var restoreTries = 0;
    function laRestoreView() {
-      restoreTries++;
-      if (restoreTries > 30) return true;
+            // ไม่นับครั้งตอนแอปยังโหลดไม่เสร็จ — หน้าหนักอย่างติดตามงานใช้เวลานานกว่า 12 วินาที
       var s = (location.hash || '').slice(1);
       if (!(s in VIEW_INDEX) || s === 'dashboard') return true;
       var nav = document.querySelectorAll('aside.fixed.left-0 nav button');
       if (nav.length < 6) return false;
+      restoreTries++;
+      if (restoreTries > 60) return true;
       var btn = nav[VIEW_INDEX[s]];
       if (!btn) return false;
                   var h2s = document.querySelectorAll('h2');
