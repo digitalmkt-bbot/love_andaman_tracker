@@ -1659,6 +1659,62 @@
       if (document.querySelector('#la-login')) { clearInterval(restoreTimer); return; }
       if (laRestoreView()) clearInterval(restoreTimer);
    }, 400);
+
+   // ===== 38. หมวดหมู่ Task + ปรับหน้าตาปุ่มจัดการให้เห็นชัดขึ้น =====
+   // เดิมแก้ได้แค่ Jobs กับ Post Topic — หมวดในกล่องเพิ่ม Task ยังเขียนตายตัว
+   // ปุ่มเดิมจืดจนมองไม่เห็นในโหมดมืด จึงเปลี่ยนเป็นปุ่มขอบม่วง ข้อความยาวขึ้น
+   function laLoadTaskCats() {
+      var t = window.laToken && window.laToken();
+      if (!t || !window.CATEGORIES) return;
+      laOptApi('/options?kind=eq.task_category&select=name,sort&order=sort,id').then(function (r) {
+         return r.ok ? r.json() : null;
+      }).then(function (rows) {
+         if (!rows || !rows.length) return;
+         var old = {};
+         window.CATEGORIES.forEach(function (c) { old[c.name] = c.color; });
+         var next = rows.map(function (x, i) {
+            return { name: x.name, color: old[x.name] || OPT_PALETTE[i % OPT_PALETTE.length] };
+         });
+         window.CATEGORIES.length = 0;
+         next.forEach(function (c) { window.CATEGORIES.push(c); });
+      }).catch(function () {});
+   }
+   laLoadTaskCats();
+   setTimeout(laLoadTaskCats, 2500);
+
+   // ปุ่มจัดการหมวด Task — หน้าติดตามงาน
+   function laAddTaskCatButton() {
+      if (document.getElementById('la-optbtn-task')) return;
+      var bs = document.querySelectorAll('main button');
+      for (var i = 0; i < bs.length; i++) {
+         var t = (bs[i].textContent || '').trim();
+         if (!/^(Export Tracking)$/i.test(t)) continue;
+         var b = document.createElement('button');
+         b.id = 'la-optbtn-task';
+         b.onclick = function (ev) { ev.preventDefault(); laOptionsUI('task_category', 'จัดการหมวดหมู่ Task'); };
+         bs[i].parentNode.insertBefore(b, bs[i].nextSibling);
+         break;
+      }
+   }
+   function laStyleOptButtons() {
+      var dark = document.body.classList.contains('la-dark');
+      var border = dark ? '#7450E5' : '#A5B4FC';
+      var color = dark ? '#B9A9FF' : '#4F46E5';
+      var spec = [
+         ['la-optbtn-job', '⚙ จัดการหมวดหมู่'],
+         ['la-optbtn-topic', '⚙ จัดการ Post Topic'],
+         ['la-optbtn-task', '⚙ จัดการหมวดหมู่']
+         ];
+      spec.forEach(function (p) {
+         var b = document.getElementById(p[0]);
+         if (!b) return;
+         b.textContent = p[1];
+         b.style.cssText = 'margin-right:8px;padding:9px 16px;border-radius:12px;border:1px solid ' + border +
+            ';background:transparent;color:' + color + ';font-size:13px;font-weight:600;white-space:nowrap';
+      });
+   }
+   setInterval(function () { laAddTaskCatButton(); laStyleOptButtons(); }, 700);
+   
    
    
    
