@@ -1459,6 +1459,52 @@
    }
    laWireHero();
    setInterval(laWireHero, 700);
+
+   // ===== 34. แปลข้อความในกล่องเพิ่ม Task / Job / Post =====
+   // กล่องเหล่านี้เขียนไทยตายตัว จึงไม่เปลี่ยนตามภาษา
+   // ชื่อสมาชิกและชื่อหมวดที่ลูกค้าตั้งเองเป็นข้อมูล ไม่แปล
+   var MODAL_TR = {
+      'เพิ่ม Task ใหม่': 'Add New Task',
+      'เพิ่ม Planning Post': 'Add Planning Post',
+      'ผู้รับผิดชอบ — กดเลือกได้หลายคน': 'Assignees — select multiple',
+      'หมวดหมู่': 'Category',
+      'หมวดหมู่ Jobs': 'Job category',
+      'ชื่อ Job': 'Job name',
+      'ชื่อ Task': 'Task name',
+      'กำหนดส่ง': 'Due date',
+      'หมายเหตุ / comment': 'Notes / comment',
+      'เพิ่ม Job': 'Add Job',
+      'เพิ่ม Task': 'Add Task',
+      'เพิ่ม Post': 'Add Post',
+      'เช่น แถลงข่าวเปิดตัวทัวร์ใหม่ที่ภูเก็ต': 'e.g. Press launch for a new Phuket tour',
+      'รายละเอียด, สื่อมวลชนที่เชิญ, สถานที่, ลิงก์อ้างอิง…': 'Details, invited media, venue, reference links…',
+      'เช่น โพสต์ IG สำหรับโปรทัวร์เกาะสิมิลัน': 'e.g. IG post for the Similan tour promo',
+      'รายละเอียดเพิ่มเติม, lock requirement, ลิงก์อ้างอิง…': 'More details, lock requirement, reference links…',
+      'เช่น หมู่เกาะสุรินทร์, อ่าวมาหยา, baboon run…': 'e.g. Surin Islands, Maya Bay, baboon run…'
+   };
+   if (React && !React.__laModalTr) {
+      var prevCE9 = React.createElement;
+      React.createElement = function (type, props) {
+         var a = Array.prototype.slice.call(arguments);
+         var lang = 'th';
+         try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+         if (lang === 'en') {
+            for (var mi = 2; mi < a.length; mi++) {
+               if (typeof a[mi] === 'string') {
+                  var tt = a[mi].trim();
+                  if (MODAL_TR[tt]) a[mi] = a[mi].replace(tt, MODAL_TR[tt]);
+               }
+            }
+            if (a[1] && typeof a[1].placeholder === 'string') {
+               var pp = a[1].placeholder.trim();
+               if (MODAL_TR[pp]) { var q = Object.assign({}, a[1]); q.placeholder = MODAL_TR[pp]; a[1] = q; }
+            }
+         }
+         return prevCE9.apply(this, a);
+      };
+      React.__laModalTr = true;
+   }
+   
    
    
    
