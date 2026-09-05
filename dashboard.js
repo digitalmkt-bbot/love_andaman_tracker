@@ -1886,3 +1886,12 @@ function laSaveBrand() {
       } catch (err) {}
 }
 setInterval(laSaveBrand, 2000);
+
+
+// ===== 44. เปิดหน้าหลังแปลภาษาเสร็จ =====
+// index.html ซ่อน body ไว้กันเห็นภาษาผิดแวบ — ตรงนี้คือจุดที่เปิดคืน
+function laReveal() {
+   var s = document.getElementById('la-boot-hide');
+   if (s && s.parentNode) s.parentNode.removeChild(s);
+}
+setTimeout(laReveal, 400);
