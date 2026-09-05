@@ -172,12 +172,44 @@ button,a[role="button"]{min-height:40px}
       on: true,
       maxItems: 50,
       maxTeam: 5,
-      /* ┌── แก้ 4 บรรทัดนี้ให้เป็นข้อมูลจริงก่อนเปิดขาย ─────────────────┐ */
-      price:    '฿___ / เดือน',
-      priceSub: 'ไม่จำกัดจำนวนงานและสมาชิกทีม',
-      ctaText:  'ติดต่อสั่งซื้อ',
-      ctaUrl:   '',
-      /* └── ctaUrl ว่างไว้ = ไม่ต้องแสดงปุ่ม แสดงแค่ราคา ────────────────┘ */
+      note: 'จ่ายครั้งเดียว ใช้ได้ตลอดไป · ไม่มีค่ารายเดือน ไม่มีการตัดบัตรอัตโนมัติ',
+      /* ┌── ใส่ลิงก์สั่งซื้อของแต่ละแพ็กเกจที่ url ─────────────────────┐
+         │  เว้นว่างไว้ = ปุ่มจะกดแล้วไม่เกิดอะไรขึ้น                   │
+         │  ราคานี้เป็นราคาเปิดตัว ถ้าจะขึ้นราคาให้แก้ price / was     │
+         └──────────────────────────────────────────────────────────┘ */
+      plans: [
+        {
+          name: 'เริ่มต้น',
+          seats: 'ใช้ได้ไม่เกิน 10 คน',
+          was: '5,900',
+          price: '990',
+          url: '',
+          feats: [
+            'กระดานงานและตารางเวร',
+            'ผู้ใช้ได้ถึง 10 คน',
+            'Task 1,000',
+            'ใช้งานได้ทันทีหลังยืนยันการชำระเงิน'
+          ]
+        },
+        {
+          name: 'ธุรกิจ',
+          seats: 'ใช้ได้ไม่เกิน 20 คน',
+          was: '9,900',
+          price: '2,590',
+          best: true,
+          url: '',
+          feats: [
+            'ทุกอย่างในแพ็กเกจเริ่มต้น',
+            'สิทธิ์แยกตามตำแหน่ง',
+            'ผู้ใช้ได้ถึง 20 คน',
+            'Task 2,000',
+            'งานประจำอัตโนมัติ',
+            'รายงานสรุปรายเดือน',
+            'ใส่โลโก้และสีของบริษัทคุณ',
+            'ช่วยย้ายข้อมูลเดิมจาก Excel'
+          ]
+        }
+      ]
     };
 
     /* นับของที่มีอยู่ทุกครั้งที่ดึงข้อมูลจากเซิร์ฟเวอร์ */
@@ -197,25 +229,44 @@ button,a[role="button"]{min-height:40px}
       st.id = 'la-quota-css';
       st.textContent = [
         '.la-quota-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;',
-        'display:flex;align-items:center;justify-content:center;padding:20px}',
-        '.la-quota{background:#fff;color:#0F1720;border-radius:20px;max-width:380px;width:100%;',
-        'padding:26px 24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.28);',
-        'font-family:inherit;position:relative}',
+        'display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}',
+        '.la-quota{background:#fff;color:#0F1720;border-radius:22px;max-width:720px;width:100%;',
+        'padding:26px 24px 20px;box-shadow:0 24px 60px rgba(15,23,42,.3);font-family:inherit;',
+        'max-height:92vh;overflow:auto}',
         '.la-quota.d{background:#151B2E;color:#E2E8F0}',
-        '.la-quota h3{margin:0 0 6px;font-size:18px;font-weight:800;line-height:1.35}',
-        '.la-quota p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:#64748B}',
-        '.la-quota.d p{color:#94A3B8}',
-        '.la-quota .pr{background:#F1F5FF;border-radius:14px;padding:14px 12px;margin-bottom:16px}',
-        '.la-quota.d .pr{background:#1B2338}',
-        '.la-quota .pr b{display:block;font-size:22px;font-weight:800;color:#4F46E5;line-height:1.3}',
-        '.la-quota.d .pr b{color:#A5B4FC}',
-        '.la-quota .pr span{font-size:12px;color:#64748B}',
-        '.la-quota.d .pr span{color:#94A3B8}',
-        '.la-quota a.cta,.la-quota button.cta{display:block;width:100%;box-sizing:border-box;',
-        'background:#4F46E5;color:#fff;border:0;border-radius:12px;padding:12px;font-size:14px;',
-        'font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:8px}',
-        '.la-quota button.no{background:transparent;border:0;color:#64748B;font-size:13px;',
-        'cursor:pointer;padding:6px;width:100%}'
+        '.la-quota h3{margin:0 0 6px;font-size:19px;font-weight:800;line-height:1.35;text-align:center}',
+        '.la-quota .lead{margin:0 0 4px;font-size:13.5px;line-height:1.6;color:#64748B;text-align:center}',
+        '.la-quota .note{margin:0 0 18px;font-size:12px;color:#94A3B8;text-align:center}',
+        '.la-quota.d .lead{color:#94A3B8}',
+        '.la-qp{display:flex;gap:14px;align-items:stretch}',
+        '@media(max-width:620px){.la-qp{flex-direction:column}}',
+        '.la-qc{flex:1 1 0;border:1px solid #E6E9F2;border-radius:18px;padding:18px 16px;',
+        'display:flex;flex-direction:column;position:relative}',
+        '.la-quota.d .la-qc{border-color:#2B3448}',
+        '.la-qc.best{background:#6D5AE6;border-color:#6D5AE6;color:#fff}',
+        '.la-qc .tag{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.22);',
+        'color:#fff;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px}',
+        '.la-qc .nm{font-size:16px;font-weight:800;margin-bottom:2px}',
+        '.la-qc .st{font-size:12px;color:#64748B;margin-bottom:12px}',
+        '.la-qc.best .st{color:rgba(255,255,255,.8)}',
+        '.la-quota.d .la-qc .st{color:#94A3B8}',
+        '.la-qc .was{font-size:12px;color:#94A3B8;text-decoration:line-through}',
+        '.la-qc.best .was{color:rgba(255,255,255,.65)}',
+        '.la-qc .pz{font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.02em}',
+        '.la-qc .one{font-size:11.5px;color:#64748B;margin-bottom:14px}',
+        '.la-qc.best .one{color:rgba(255,255,255,.8)}',
+        '.la-quota.d .la-qc .one{color:#94A3B8}',
+        '.la-qc ul{list-style:none;margin:0 0 16px;padding:0;flex:1}',
+        '.la-qc li{font-size:12.5px;line-height:1.5;margin-bottom:7px;padding-left:20px;position:relative}',
+        '.la-qc li:before{content:"✓";position:absolute;left:0;top:0;color:#6D5AE6;font-weight:800}',
+        '.la-qc.best li:before{color:#fff}',
+        '.la-qc .go{display:block;text-align:center;border:0;border-radius:999px;padding:12px;',
+        'font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none;font-family:inherit;',
+        'background:#F1F3F9;color:#0F1720;width:100%;box-sizing:border-box}',
+        '.la-quota.d .la-qc .go{background:#1B2338;color:#E2E8F0}',
+        '.la-qc.best .go{background:#fff;color:#4F46E5}',
+        '.la-quota .no{background:transparent;border:0;color:#64748B;font-size:13px;',
+        'cursor:pointer;padding:14px 6px 2px;width:100%;font-family:inherit}'
         ].join('');
       document.head.appendChild(st);
     }
@@ -223,27 +274,45 @@ button,a[role="button"]{min-height:40px}
       if (document.querySelector('.la-quota-bg')) return;
       laQuotaCss();
       var head = kind === 'team'
-        ? ['เพิ่มสมาชิกทีมได้ครบแล้ว',
-           'แพ็กเกจ Demo เพิ่มสมาชิกทีมได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) ตอนนี้ครบแล้ว อัปเกรดเพื่อเพิ่มได้ไม่จำกัด']
+        ? ['เพิ่มสมาชิกทีมได้ครบ ' + LA_DEMO.maxTeam + ' คนแล้ว',
+           'แพ็กเกจ Demo เพิ่มได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) อัปเกรดเพื่อเพิ่มทีมได้มากขึ้น']
         : ['ใส่งานได้ครบ ' + LA_DEMO.maxItems + ' รายการแล้ว',
-           'แพ็กเกจ Demo ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้ไม่จำกัด'];
+           'แพ็กเกจ Demo ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้มากขึ้น'];
+
       var bg = document.createElement('div');
       bg.className = 'la-quota-bg';
       var box = document.createElement('div');
       box.className = 'la-quota' + (document.body.classList.contains('la-dark') ? ' d' : '');
+
       var h = document.createElement('h3'); h.textContent = head[0];
-      var p = document.createElement('p'); p.textContent = head[1];
-      var pr = document.createElement('div'); pr.className = 'pr';
-      var b = document.createElement('b'); b.textContent = LA_DEMO.price;
-      var sub = document.createElement('span'); sub.textContent = LA_DEMO.priceSub;
-      pr.appendChild(b); pr.appendChild(sub);
-      box.appendChild(h); box.appendChild(p); box.appendChild(pr);
-      if (LA_DEMO.ctaUrl) {
-        var a = document.createElement('a');
-        a.className = 'cta'; a.href = LA_DEMO.ctaUrl; a.target = '_blank'; a.rel = 'noopener';
-        a.textContent = LA_DEMO.ctaText;
-        box.appendChild(a);
-      }
+      var lead = document.createElement('p'); lead.className = 'lead'; lead.textContent = head[1];
+      var note = document.createElement('p'); note.className = 'note'; note.textContent = LA_DEMO.note || '';
+      box.appendChild(h); box.appendChild(lead); if (LA_DEMO.note) box.appendChild(note);
+
+      var wrap = document.createElement('div'); wrap.className = 'la-qp';
+      (LA_DEMO.plans || []).forEach(function (pl) {
+        var c = document.createElement('div');
+        c.className = 'la-qc' + (pl.best ? ' best' : '');
+        if (pl.best) { var tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = 'แนะนำ'; c.appendChild(tg); }
+        var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = pl.name;
+        var stt = document.createElement('div'); stt.className = 'st'; stt.textContent = pl.seats;
+        c.appendChild(nm); c.appendChild(stt);
+        if (pl.was) { var w = document.createElement('div'); w.className = 'was'; w.textContent = 'ปกติ ' + pl.was + ' ฿'; c.appendChild(w); }
+        var pz = document.createElement('div'); pz.className = 'pz'; pz.textContent = pl.price + ' ฿';
+        var one = document.createElement('div'); one.className = 'one'; one.textContent = 'จ่ายครั้งเดียว';
+        c.appendChild(pz); c.appendChild(one);
+        var ul = document.createElement('ul');
+        (pl.feats || []).forEach(function (f) { var li = document.createElement('li'); li.textContent = f; ul.appendChild(li); });
+        c.appendChild(ul);
+        var go;
+        if (pl.url) { go = document.createElement('a'); go.href = pl.url; go.target = '_blank'; go.rel = 'noopener'; }
+        else { go = document.createElement('button'); go.type = 'button'; }
+        go.className = 'go'; go.textContent = 'เลือกแพ็กเกจนี้';
+        c.appendChild(go);
+        wrap.appendChild(c);
+      });
+      box.appendChild(wrap);
+
       var no = document.createElement('button');
       no.className = 'no'; no.type = 'button'; no.textContent = 'ไว้ก่อน';
       function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
