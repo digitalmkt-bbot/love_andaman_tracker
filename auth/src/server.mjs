@@ -10,6 +10,11 @@
  *   PGRST_JWT_SECRET  ต้องเป็นค่าเดียวกับที่ตั้งใน service api เป๊ะๆ
  *   TOKEN_TTL_HOURS   อายุ token (ค่าเริ่มต้น 12)
  *   CORS_ORIGIN       โดเมนหน้าเว็บ เช่น https://xxx.github.io
+ *
+ *   PROMPTPAY_ID      เบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก
+ *                     ไม่ตั้ง = ปิดการขายในตัว (สร้างออเดอร์ไม่ได้)
+ *   ADMIN_KEY         กุญแจหน้าอนุมัติออเดอร์ อย่างน้อย 24 ตัวอักษร
+ *                     สร้างด้วย: openssl rand -base64 32
  * ────────────────────────────────────────────────────────────
  */
 
@@ -25,6 +30,14 @@ const JWT_SECRET = process.env.PGRST_JWT_SECRET;
 const TTL_HOURS  = Number(process.env.TOKEN_TTL_HOURS || 12);
 const PORT       = Number(process.env.PORT || 3001);
 const ORIGINS    = (process.env.CORS_ORIGIN || '*').split(',').map(s => s.trim());
+const PROMPTPAY  = (process.env.PROMPTPAY_ID || '').replace(/\D/g, '');
+const ADMIN_KEY  = process.env.ADMIN_KEY || '';
+
+/* แพ็กเกจที่ขายได้ — ราคาและเพดานยึดจากที่นี่ที่เดียว ห้ามให้ฝั่งเบราว์เซอร์ส่งมา */
+const PLANS = {
+  starter:  { price:  990, seats: 10, items: 1000, label: 'เริ่มต้น' },
+  business: { price: 2590, seats: 20, items: 2000, label: 'ธุรกิจ'  },
+};
 
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   console.error('❌ PGRST_JWT_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร');
@@ -42,12 +55,14 @@ const pool = new Pool({
 const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '64kb' }));
+/* รูปสลิปใหญ่กว่า body ปกติ จึงเปิดเพดานเฉพาะเส้นทางนี้ */
+const slipBody = express.json({ limit: '1mb' });
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (ORIGINS.includes('*')) res.set('Access-Control-Allow-Origin', '*');
   else if (origin && ORIGINS.includes(origin)) res.set('Access-Control-Allow-Origin', origin);
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
@@ -311,9 +326,206 @@ try { const r = await pool.query('SELECT 1 FROM orgs WHERE lower(code) = $1', [c
 catch { res.json({ available: null }); }
 });
 
+// ════════════════════════════════════════════════════════════
+// การสั่งซื้อและอนุมัติ
+// ════════════════════════════════════════════════════════════
+
+/* ── PromptPay QR ────────────────────────────────────────────
+   สร้าง payload ตามมาตรฐาน EMVCo เอง ไม่ต้องพึ่งไลบรารีภายนอก
+   โครงเป็น TLV: แท็ก 2 หลัก + ความยาว 2 หลัก + ค่า  ปิดท้ายด้วย CRC */
+function tlv(tag, value) {
+  return tag + String(value.length).padStart(2, '0') + value;
+}
+function crc16(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let b = 0; b < 8; b++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function promptpayPayload(target, amount) {
+  const id = String(target).replace(/\D/g, '');
+  let acc;
+  if (id.length === 13) acc = tlv('02', id);                       // เลขบัตรประชาชน / นิติบุคคล
+  else if (id.length === 10) acc = tlv('01', '0066' + id.slice(1)); // เบอร์มือถือ 0812345678 → 0066812345678
+  else throw new Error('PROMPTPAY_ID ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลข 13 หลัก');
+
+  const body =
+      tlv('00', '01')                                  // เวอร์ชัน payload
+    + tlv('01', '12')                                  // 12 = ใช้ครั้งเดียว (มียอดกำกับ)
+    + tlv('29', tlv('00', 'A000000677010111') + acc)   // AID ของพร้อมเพย์
+    + tlv('53', '764')                                 // สกุลเงินบาท
+    + tlv('54', amount.toFixed(2))
+    + tlv('58', 'TH');
+  const withTag = body + '6304';                       // ต้องรวมแท็ก CRC ก่อนคำนวณ
+  return withTag + crc16(withTag);
+}
+
+/* ยอดลงท้ายไม่ซ้ำ — ผูกสตางค์กับเลขออเดอร์ จับคู่รายการโอนได้แม่นแม้ตรวจด้วยมือ */
+function orderAmount(price, orderId) {
+  let h = 0;
+  for (let i = 0; i < orderId.length; i++) h = (h * 31 + orderId.charCodeAt(i)) >>> 0;
+  return price + (h % 99 + 1) / 100;   // .01 ถึง .99 ไม่มี .00 จะได้ไม่ชนยอดกลม
+}
+
+/* ── POST /orders  { plan } ──────────────────────────────────
+   org_id อ่านจาก token เท่านั้น ห้ามรับจาก body เด็ดขาด */
+app.post('/orders', auth, async (req, res) => {
+  if (req.claims.user_role !== 'admin')
+    return res.status(403).json({ error: 'เฉพาะแอดมินของบริษัทเท่านั้นที่สั่งซื้อได้' });
+
+  const plan = String(req.body?.plan || '');
+  const spec = PLANS[plan];
+  if (!spec) return res.status(400).json({ error: 'ไม่รู้จักแพ็กเกจนี้' });
+  if (!PROMPTPAY) return res.status(503).json({ error: 'ระบบยังไม่เปิดรับชำระเงิน กรุณาติดต่อทีมงาน' });
+
+  try {
+    const { rows: [open] } = await pool.query(
+      `SELECT id FROM orders WHERE org_id = $1 AND status IN ('waiting','checking') LIMIT 1`,
+      [req.claims.org_id]);
+    if (open) return res.status(409).json({ error: 'มีคำสั่งซื้อที่ยังไม่เสร็จอยู่แล้ว', order_id: open.id });
+
+    const id = 'ord_' + crypto.randomBytes(5).toString('hex');
+    const amount = orderAmount(spec.price, id);
+    await pool.query(
+      `INSERT INTO orders (id, org_id, plan, amount, status, created_by)
+       VALUES ($1, $2, $3, $4, 'waiting', $5)`,
+      [id, req.claims.org_id, plan, amount, req.claims.user_id]);
+
+    res.json({
+      id, plan, plan_label: spec.label, amount,
+      qr: promptpayPayload(PROMPTPAY, amount),
+      promptpay: PROMPTPAY,
+      status: 'waiting',
+    });
+  } catch (e) {
+    console.error('create order error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง กรุณาลองใหม่' });
+  }
+});
+
+/* ── GET /orders — ออเดอร์ของบริษัทตัวเอง ────────────────────
+   ไม่ส่งรูปสลิปกลับ เปลืองเน็ตเปล่า ๆ */
+app.get('/orders', auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, plan, amount, status, note, created_at, paid_at
+         FROM orders WHERE org_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      [req.claims.org_id]);
+    res.json(rows);
+  } catch (e) {
+    console.error('list orders error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
+/* ── POST /orders/:id/slip  { image } ────────────────────────
+   image เป็น data URL ที่ย่อมาแล้วจากเบราว์เซอร์ */
+app.post('/orders/:id/slip', auth, slipBody, async (req, res) => {
+  const img = String(req.body?.image || '');
+  if (!/^data:image\/(jpeg|png|webp);base64,/.test(img))
+    return res.status(400).json({ error: 'ไฟล์ต้องเป็นรูปภาพ' });
+  if (img.length > 700_000)
+    return res.status(413).json({ error: 'รูปใหญ่เกินไป ลองถ่ายใหม่หรือย่อขนาดก่อน' });
+
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE orders SET slip_image = $1, status = 'checking'
+        WHERE id = $2 AND org_id = $3 AND status IN ('waiting','checking')`,
+      [img, req.params.id, req.claims.org_id]);
+    if (!rowCount) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อนี้ หรือตรวจสอบเสร็จแล้ว' });
+    res.json({ ok: true, status: 'checking' });
+  } catch (e) {
+    console.error('upload slip error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
+/* ── หน้าอนุมัติของทีมงาน ────────────────────────────────────
+   ใช้กุญแจแยกจากระบบล็อกอินลูกค้า เทียบแบบ timing-safe */
+function adminOnly(req, res, next) {
+  const key = String(req.headers['x-admin-key'] || '');
+  const a = Buffer.from(key), b = Buffer.from(ADMIN_KEY);
+  if (!ADMIN_KEY || ADMIN_KEY.length < 24)
+    return res.status(503).json({ error: 'ยังไม่ได้ตั้ง ADMIN_KEY บนเซิร์ฟเวอร์' });
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b))
+    return res.status(401).json({ error: 'กุญแจไม่ถูกต้อง' });
+  next();
+}
+
+app.get('/admin/orders', adminOnly, async (req, res) => {
+  const only = String(req.query.status || 'checking');
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.org_id, o.plan, o.amount, o.status, o.note, o.slip_image,
+              o.created_at, o.paid_at, g.code AS org_code, g.name AS org_name
+         FROM orders o JOIN orgs g ON g.id = o.org_id
+        WHERE ($1 = 'all' OR o.status = $1)
+        ORDER BY o.created_at DESC LIMIT 100`, [only]);
+    res.json(rows);
+  } catch (e) {
+    console.error('admin list error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
+/* อนุมัติ — ปิดออเดอร์กับขยายเพดานต้องอยู่ใน transaction เดียวกัน
+   เงื่อนไข status='checking' ทำให้กดซ้ำไม่เกิดผลสองรอบ */
+app.post('/admin/orders/:id/approve', adminOnly, async (req, res) => {
+  const ref = req.body?.slip_ref ? String(req.body.slip_ref).trim() : null;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [o] } = await client.query(
+      `SELECT id, org_id, plan FROM orders
+        WHERE id = $1 AND status = 'checking' FOR UPDATE`, [req.params.id]);
+    if (!o) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'ออเดอร์นี้ไม่ได้อยู่ระหว่างตรวจสอบ (อาจอนุมัติไปแล้ว)' }); }
+
+    const spec = PLANS[o.plan];
+    if (!spec) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'ไม่รู้จักแพ็กเกจของออเดอร์นี้' }); }
+
+    await client.query(
+      `UPDATE orders SET status='paid', slip_ref=$1, paid_at=now() WHERE id=$2`, [ref, o.id]);
+    await client.query(
+      `UPDATE orgs SET plan=$1, seat_limit=$2, item_limit=$3 WHERE id=$4`,
+      [o.plan, spec.seats, spec.items, o.org_id]);
+    await client.query('COMMIT');
+
+    res.json({ ok: true, org_id: o.org_id, plan: o.plan, seat_limit: spec.seats, item_limit: spec.items });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (e.code === '23505') return res.status(409).json({ error: 'สลิปใบนี้ถูกใช้ไปแล้วกับออเดอร์อื่น' });
+    console.error('approve error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  } finally { client.release(); }
+});
+
+app.post('/admin/orders/:id/reject', adminOnly, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE orders SET status='rejected', note=$1
+        WHERE id=$2 AND status='checking'`,
+      [String(req.body?.note || 'ตรวจสอบสลิปไม่ผ่าน'), req.params.id]);
+    if (!rowCount) return res.status(409).json({ error: 'ออเดอร์นี้ไม่ได้อยู่ระหว่างตรวจสอบ' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('reject error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ok: true }); }
   catch { res.status(503).json({ ok: false }); }
+});
+
+/* body-parser ปฏิเสธไฟล์ใหญ่ก่อนเข้า route ถ้าไม่ดักตรงนี้ลูกค้าจะได้ HTML ไม่ใช่ข้อความไทย */
+app.use((err, _req, res, _next) => {
+  if (err && err.type === 'entity.too.large')
+    return res.status(413).json({ error: 'ไฟล์ใหญ่เกินไป ลองถ่ายสลิปใหม่หรือย่อขนาดก่อน' });
+  console.error('unhandled:', err && err.message);
+  res.status(500).json({ error: 'ระบบขัดข้อง' });
 });
 
 app.listen(PORT, () => console.log(`auth service listening on ${PORT}`));

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>อนุมัติคำสั่งซื้อ</title>
+<!-- หน้านี้ใช้กุญแจ ADMIN_KEY ของทีมงาน ไม่เกี่ยวกับบัญชีล็อกอินของลูกค้า
+     กุญแจเก็บไว้ใน sessionStorage ปิดแท็บแล้วหาย ต้องกรอกใหม่ -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F6FC; --card:#fff; --sunk:#EEF1F8; --ink:#141827; --ink2:#5A6180; --ink3:#8A91AB;
+    --line:#E0E4EF; --accent:#5B4BD6; --ok:#0B7C61; --okbg:#DCF3EC; --bad:#B3480C; --badbg:#FBEADF;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.7}
+  .wrap{max-width:940px;margin:0 auto;padding:32px 20px 70px}
+  h1{font-size:24px;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 22px}
+  .mono{font-family:'IBM Plex Mono',monospace}
+
+  .gate{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;max-width:420px}
+  .gate label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  input[type=password],input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line);
+    border-radius:10px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+  input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+
+  button{font-family:inherit;font-size:14px;font-weight:600;border:0;border-radius:10px;
+    padding:11px 18px;cursor:pointer;background:var(--accent);color:#fff}
+  button.ghost{background:var(--sunk);color:var(--ink)}
+  button.bad{background:var(--badbg);color:var(--bad)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .bar select{padding:9px 12px;border:1px solid var(--line);border-radius:9px;
+    font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink)}
+
+  .order{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px;margin-bottom:14px;display:grid;grid-template-columns:200px 1fr;gap:20px}
+  @media(max-width:700px){.order{grid-template-columns:1fr}}
+  .slip{background:var(--sunk);border-radius:11px;overflow:hidden;display:flex;
+    align-items:center;justify-content:center;min-height:150px}
+  .slip img{width:100%;display:block;cursor:zoom-in}
+  .slip .none{color:var(--ink3);font-size:13px;padding:20px;text-align:center}
+  .who{font-size:17px;font-weight:700;margin:0 0 2px}
+  .meta{color:var(--ink2);font-size:13px;margin:0 0 12px}
+  .amt{font-size:26px;font-weight:700;letter-spacing:-.01em;margin:0;font-variant-numeric:tabular-nums}
+  .amt small{font-size:13px;font-weight:500;color:var(--ink2);letter-spacing:0}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;
+    background:var(--sunk);color:var(--ink2);vertical-align:middle;margin-left:6px}
+  .pill.paid{background:var(--okbg);color:var(--ok)}
+  .pill.rejected{background:var(--badbg);color:var(--bad)}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .acts input{flex:1 1 190px;min-width:0;padding:9px 12px;font-size:13px}
+  .msg{margin:14px 0;padding:11px 14px;border-radius:10px;font-size:14px}
+  .msg.err{background:var(--badbg);color:var(--bad)}
+  .msg.ok{background:var(--okbg);color:var(--ok)}
+  .empty{color:var(--ink3);text-align:center;padding:50px 20px}
+  .hint{color:var(--ink3);font-size:12.5px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>อนุมัติคำสั่งซื้อ</h1>
+  <p class="sub">ตรวจสลิปแล้วกดอนุมัติ ระบบจะขยายเพดานให้ลูกค้าเองภายใน 15 วินาที</p>
+
+  <div id="gate" class="gate">
+    <label for="k">กุญแจทีมงาน (ADMIN_KEY)</label>
+    <input id="k" type="password" autocomplete="off" placeholder="วางกุญแจที่ตั้งไว้บนเซิร์ฟเวอร์">
+    <p class="hint">เก็บไว้แค่ในแท็บนี้ ปิดแล้วต้องกรอกใหม่</p>
+    <div style="margin-top:12px"><button id="go">เข้าใช้งาน</button></div>
+    <div id="gerr"></div>
+  </div>
+
+  <div id="main" hidden>
+    <div class="bar">
+      <select id="filter">
+        <option value="checking">รอตรวจสอบ</option>
+        <option value="waiting">รอชำระเงิน</option>
+        <option value="paid">อนุมัติแล้ว</option>
+        <option value="rejected">ปฏิเสธแล้ว</option>
+        <option value="all">ทั้งหมด</option>
+      </select>
+      <button id="reload" class="ghost">โหลดใหม่</button>
+      <button id="out" class="ghost">ออก</button>
+    </div>
+    <div id="msg"></div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ไม่โหลด login.js เพราะมันจะเด้งหน้าล็อกอินของลูกค้าทับทั้งจอ
+     หน้านี้ใช้ ADMIN_KEY แยกต่างหาก จึงใส่ที่อยู่เซิร์ฟเวอร์ตรงนี้เลย
+     (ค่าเดียวกับ AUTH ใน login.js — ถ้าย้ายเซิร์ฟเวอร์ต้องแก้ทั้งสองที่) */
+  var AUTH = 'https://auth-clone-clone-task.up.railway.app';
+  var KEY = 'la_admin_key';
+  var $ = function (id) { return document.getElementById(id); };
+  var key = '';
+  try { key = sessionStorage.getItem(KEY) || ''; } catch (e) {}
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'X-Admin-Key': key, 'Content-Type': 'application/json' }, opts.headers || {});
+    return fetch(AUTH + path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || ('ผิดพลาด ' + r.status));
+        return d;
+      });
+    });
+  }
+  function say(text, kind) {
+    $('msg').innerHTML = text ? '<div class="msg ' + kind + '">' + text + '</div>' : '';
+  }
+  function baht(n) { return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 }); }
+  function when(s) { return s ? new Date(s).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : ''; }
+  var LABEL = { waiting: 'รอชำระเงิน', checking: 'รอตรวจสอบ', paid: 'อนุมัติแล้ว', rejected: 'ปฏิเสธแล้ว' };
+  var PLAN = { starter: 'เริ่มต้น', business: 'ธุรกิจ' };
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  function draw(rows) {
+    var box = $('list');
+    if (!rows.length) { box.innerHTML = '<div class="empty">ไม่มีรายการในสถานะนี้</div>'; return; }
+    box.innerHTML = rows.map(function (o) {
+      var slip = o.slip_image
+        ? '<img src="' + esc(o.slip_image) + '" alt="สลิปของ ' + esc(o.org_name) + '" onclick="window.open(this.src)">'
+        : '<div class="none">ยังไม่ได้ส่งสลิป</div>';
+      var acts = o.status === 'checking'
+        ? '<div class="acts">' +
+            '<input class="ref" placeholder="เลขอ้างอิงรายการ (ถ้ามี)" aria-label="เลขอ้างอิงรายการ">' +
+            '<button class="ok" data-id="' + esc(o.id) + '">อนุมัติ</button>' +
+            '<button class="bad no" data-id="' + esc(o.id) + '">ปฏิเสธ</button>' +
+          '</div>'
+        : (o.note ? '<p class="hint">หมายเหตุ: ' + esc(o.note) + '</p>' : '');
+      return '<div class="order" data-row="' + esc(o.id) + '">' +
+        '<div class="slip">' + slip + '</div>' +
+        '<div>' +
+          '<p class="who">' + esc(o.org_name) + '<span class="pill ' + esc(o.status) + '">' + (LABEL[o.status] || o.status) + '</span></p>' +
+          '<p class="meta mono">' + esc(o.org_code) + ' · ' + esc(o.id) + ' · ' + when(o.created_at) + '</p>' +
+          '<p class="amt">' + baht(o.amount) + ' ฿ <small>แพ็กเกจ' + (PLAN[o.plan] || esc(o.plan)) + '</small></p>' +
+          acts +
+        '</div></div>';
+    }).join('');
+  }
+
+  function load() {
+    say('');
+    $('list').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+    api('/admin/orders?status=' + encodeURIComponent($('filter').value))
+      .then(draw)
+      .catch(function (e) { $('list').innerHTML = ''; say(e.message, 'err'); });
+  }
+
+  $('list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    var id = b.dataset.id; if (!id) return;
+    var row = b.closest('.order');
+    var reject = b.classList.contains('no');
+    if (reject && !confirm('ปฏิเสธคำสั่งซื้อนี้?')) return;
+    row.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+    var ref = (row.querySelector('.ref') || {}).value || '';
+    api('/admin/orders/' + encodeURIComponent(id) + (reject ? '/reject' : '/approve'), {
+      method: 'POST',
+      body: JSON.stringify(reject ? { note: 'ตรวจสอบสลิปไม่ผ่าน' } : { slip_ref: ref.trim() || null })
+    }).then(function (d) {
+      say(reject ? 'ปฏิเสธแล้ว'
+        : 'อนุมัติแล้ว — ' + d.org_id + ' ได้แพ็กเกจ' + (PLAN[d.plan] || d.plan) +
+          ' (' + d.seat_limit + ' คน / ' + d.item_limit + ' งาน) เพดานจะขยายให้ลูกค้าภายใน 15 วินาที', 'ok');
+      load();
+    }).catch(function (e) {
+      say(e.message, 'err');
+      row.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
+    });
+  });
+
+  function enter(k) {
+    key = k;
+    try { sessionStorage.setItem(KEY, k); } catch (e) {}
+    $('gate').hidden = true; $('main').hidden = false;
+    load();
+  }
+  $('go').onclick = function () {
+    var v = $('k').value.trim();
+    if (!v) return;
+    key = v;
+    api('/admin/orders?status=checking')
+      .then(function () { enter(v); })
+      .catch(function (e) { $('gerr').innerHTML = '<div class="msg err">' + esc(e.message) + '</div>'; });
+  };
+  $('k').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('go').click(); });
+  $('reload').onclick = load;
+  $('filter').onchange = load;
+  $('out').onclick = function () {
+    try { sessionStorage.removeItem(KEY); } catch (e) {}
+    location.reload();
+  };
+
+  if (key) enter(key);
+})();
+</script>
+</body>
+</html>

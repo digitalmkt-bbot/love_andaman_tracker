@@ -184,6 +184,7 @@ button,a[role="button"]{min-height:40px}
       plans: [
         {
           name: 'เริ่มต้น',
+          key: 'starter',
           rank: 1,
           seats: 'ใช้ได้ไม่เกิน 10 คน',
           was: '5,900',
@@ -198,6 +199,7 @@ button,a[role="button"]{min-height:40px}
         },
         {
           name: 'ธุรกิจ',
+          key: 'business',
           rank: 2,
           seats: 'ใช้ได้ไม่เกิน 20 คน',
           was: '9,900',
@@ -326,6 +328,7 @@ button,a[role="button"]{min-height:40px}
       var note = document.createElement('p'); note.className = 'note'; note.textContent = LA_DEMO.note || '';
       box.appendChild(h); box.appendChild(lead); if (LA_DEMO.note) box.appendChild(note);
 
+      function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
       var wrap = document.createElement('div'); wrap.className = 'la-qp';
       offer.forEach(function (pl) {
         var c = document.createElement('div');
@@ -345,8 +348,12 @@ button,a[role="button"]{min-height:40px}
         (pl.feats || []).forEach(function (f) { var li = document.createElement('li'); li.textContent = f; ul.appendChild(li); });
         c.appendChild(ul);
         var go;
-        if (pl.url) { go = document.createElement('a'); go.href = pl.url; go.target = '_blank'; go.rel = 'noopener'; }
-        else { go = document.createElement('button'); go.type = 'button'; }
+        if (pl.key) {
+          go = document.createElement('button'); go.type = 'button';
+          go.onclick = function () { close(); laStartOrder(pl.key); };
+        } else if (pl.url) {
+          go = document.createElement('a'); go.href = pl.url; go.target = '_blank'; go.rel = 'noopener';
+        } else { go = document.createElement('button'); go.type = 'button'; }
         go.className = 'go'; go.textContent = pl.cta || 'เลือกแพ็กเกจนี้';
         c.appendChild(go);
         wrap.appendChild(c);
@@ -361,13 +368,166 @@ button,a[role="button"]{min-height:40px}
 
       var no = document.createElement('button');
       no.className = 'no'; no.type = 'button'; no.textContent = 'ไว้ก่อน';
-      function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
       no.onclick = close;
       bg.onclick = function (ev) { if (ev.target === bg) close(); };
       box.appendChild(no);
       bg.appendChild(box);
       document.body.appendChild(bg);
     }
+
+    /* ===== หน้าจ่ายเงิน — สร้างออเดอร์ โชว์ QR แล้วแนบสลิป ==================
+       ราคาและเพดานยึดจากฝั่งเซิร์ฟเวอร์ ที่นี่แค่แสดงผลกับส่งไฟล์
+       ====================================================================== */
+    var LA_AUTH = (window.LA_CONFIG && window.LA_CONFIG.auth) || '';
+
+    function laAuthFetch(path, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign(
+        { 'Authorization': 'Bearer ' + (window.laToken ? window.laToken() : ''), 'Content-Type': 'application/json' },
+        opts.headers || {});
+      return fetch(LA_AUTH + path, opts).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok) throw new Error(d.error || ('ผิดพลาด ' + r.status));
+          return d;
+        });
+      });
+    }
+
+    function laPayCss() {
+      if (document.getElementById('la-pay-css')) return;
+      var st = document.createElement('style');
+      st.id = 'la-pay-css';
+      st.textContent = [
+        '.la-pay{background:#fff;color:#0F1720;border-radius:22px;max-width:380px;width:100%;',
+        'padding:24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.3);',
+        'font-family:inherit;max-height:92vh;overflow:auto}',
+        '.la-quota.d.la-pay,.la-pay.d{background:#151B2E;color:#E2E8F0}',
+        '.la-pay h3{margin:0 0 4px;font-size:18px;font-weight:800}',
+        '.la-pay .p{margin:0 0 14px;font-size:13px;color:#64748B;line-height:1.6}',
+        '.la-pay.d .p{color:#94A3B8}',
+        '.la-pay .qr{background:#fff;border-radius:14px;padding:12px;display:inline-block;',
+        'min-height:180px;min-width:180px;border:1px solid #E6E9F2}',
+        '.la-pay .qr img,.la-pay .qr canvas{display:block;margin:0 auto}',
+        '.la-pay .amt{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:14px 0 2px;',
+        'font-variant-numeric:tabular-nums}',
+        '.la-pay .exact{font-size:12px;color:#B3480C;margin:0 0 14px;font-weight:600}',
+        '.la-pay .acct{font-size:12.5px;color:#64748B;margin:0 0 16px}',
+        '.la-pay.d .acct{color:#94A3B8}',
+        '.la-pay .btn{display:block;width:100%;box-sizing:border-box;border:0;border-radius:12px;',
+        'padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;',
+        'background:#6D5AE6;color:#fff;margin-bottom:8px}',
+        '.la-pay .btn.wait{background:#F1F3F9;color:#0F1720}',
+        '.la-pay.d .btn.wait{background:#1B2338;color:#E2E8F0}',
+        '.la-pay .err{color:#B3480C;font-size:13px;margin:0 0 10px}',
+        '.la-pay .done{font-size:15px;font-weight:700;color:#0B7C61;margin:10px 0 6px}'
+        ].join('');
+      document.head.appendChild(st);
+    }
+
+    /* ย่อรูปสลิปก่อนส่ง — กว้าง 1000px พออ่านเลขบัญชีได้ และไม่หนักเกิน */
+    function laShrinkSlip(file) {
+      return new Promise(function (ok, no) {
+        var img = new Image();
+        img.onload = function () {
+          var w = img.width, h = img.height, max = 1000;
+          if (w > max) { h = Math.round(h * max / w); w = max; }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          ok(c.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = function () { no(new Error('เปิดไฟล์รูปไม่ได้')); };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    /* วาด QR ด้วยไลบรารีจาก CDN ถ้าโหลดไม่ได้ก็ยังโอนตามเลข/ยอดได้ */
+    function laDrawQR(box, payload) {
+      function draw() {
+        try { new window.QRCode(box, { text: payload, width: 176, height: 176, correctLevel: window.QRCode.CorrectLevel.M }); }
+        catch (e) { box.textContent = 'สแกน QR ไม่ได้ ใช้เลขพร้อมเพย์ด้านล่างโอนแทนได้'; }
+      }
+      if (window.QRCode) return draw();
+      var sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      sc.onload = draw;
+      sc.onerror = function () { box.textContent = 'โหลด QR ไม่ได้ ใช้เลขพร้อมเพย์ด้านล่างโอนแทนได้'; };
+      document.head.appendChild(sc);
+    }
+
+    function laStartOrder(plan) {
+      laQuotaCss(); laPayCss();
+      if (document.querySelector('.la-quota-bg')) return;
+      var dark = document.body.classList.contains('la-dark');
+      var bg = document.createElement('div'); bg.className = 'la-quota-bg';
+      var box = document.createElement('div'); box.className = 'la-pay' + (dark ? ' d' : '');
+      bg.appendChild(box); document.body.appendChild(bg);
+      function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
+      bg.onclick = function (ev) { if (ev.target === bg) close(); };
+
+      box.innerHTML = '<h3>กำลังสร้างคำสั่งซื้อ…</h3>';
+      laAuthFetch('/orders', { method: 'POST', body: JSON.stringify({ plan: plan }) })
+        .then(function (o) { paint(o); })
+        .catch(function (e) {
+          box.innerHTML = '';
+          var h = document.createElement('h3'); h.textContent = 'สั่งซื้อไม่สำเร็จ';
+          var p = document.createElement('p'); p.className = 'err'; p.textContent = e.message;
+          var b = document.createElement('button'); b.className = 'btn wait'; b.textContent = 'ปิด'; b.onclick = close;
+          box.appendChild(h); box.appendChild(p); box.appendChild(b);
+        });
+
+      function paint(o) {
+        box.innerHTML = '';
+        var h = document.createElement('h3'); h.textContent = 'สแกนจ่ายด้วยพร้อมเพย์';
+        var p = document.createElement('p'); p.className = 'p';
+        p.textContent = 'แพ็กเกจ' + o.plan_label + ' · จ่ายครั้งเดียว ใช้ได้ตลอดไป';
+        var qr = document.createElement('div'); qr.className = 'qr';
+        var amt = document.createElement('div'); amt.className = 'amt';
+        amt.textContent = Number(o.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' ฿';
+        var ex = document.createElement('p'); ex.className = 'exact';
+        ex.textContent = 'โอนให้ตรงยอดนี้ รวมเศษสตางค์ ระบบใช้จับคู่รายการ';
+        var ac = document.createElement('p'); ac.className = 'acct';
+        ac.textContent = 'พร้อมเพย์ ' + o.promptpay + ' · เลขที่ ' + o.id;
+        box.appendChild(h); box.appendChild(p); box.appendChild(qr);
+        box.appendChild(amt); box.appendChild(ex); box.appendChild(ac);
+        laDrawQR(qr, o.qr);
+
+        var err = document.createElement('p'); err.className = 'err';
+        var pick = document.createElement('button'); pick.className = 'btn'; pick.textContent = 'โอนแล้ว — แนบสลิป';
+        var later = document.createElement('button'); later.className = 'btn wait'; later.textContent = 'ไว้ก่อน';
+        later.onclick = close;
+        box.appendChild(err); box.appendChild(pick); box.appendChild(later);
+
+        pick.onclick = function () {
+          var inp = document.createElement('input');
+          inp.type = 'file'; inp.accept = 'image/*';
+          inp.onchange = function () {
+            var f = inp.files && inp.files[0];
+            if (!f) return;
+            err.textContent = ''; pick.disabled = true; pick.textContent = 'กำลังส่ง…';
+            laShrinkSlip(f)
+              .then(function (url) {
+                return laAuthFetch('/orders/' + encodeURIComponent(o.id) + '/slip',
+                  { method: 'POST', body: JSON.stringify({ image: url }) });
+              })
+              .then(function () {
+                box.innerHTML = '';
+                var d = document.createElement('p'); d.className = 'done'; d.textContent = 'ส่งสลิปแล้ว';
+                var t = document.createElement('p'); t.className = 'p';
+                t.textContent = 'ทีมงานกำลังตรวจสอบ เมื่ออนุมัติแล้วเพดานจะขยายให้เองภายใน 15 วินาที ไม่ต้องออกจากระบบ';
+                var c = document.createElement('button'); c.className = 'btn'; c.textContent = 'เข้าใจแล้ว'; c.onclick = close;
+                box.appendChild(d); box.appendChild(t); box.appendChild(c);
+              })
+              .catch(function (e) {
+                err.textContent = e.message;
+                pick.disabled = false; pick.textContent = 'ลองแนบสลิปอีกครั้ง';
+              });
+          };
+          inp.click();
+        };
+      }
+    }
+    window.laStartOrder = laStartOrder;
 
     var _laCb = null, _laSig = '', _laTimer = null;
     function laFetchAll() {
