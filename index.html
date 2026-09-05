@@ -15,7 +15,8 @@
     <!-- ซ่อนหน้าไว้จนกว่า dashboard.js จะแปลภาษาเสร็จ -->
     <!-- เดิมแอปวาดหน้าเป็นไทยก่อน แล้วค่อยสลับเป็นอังกฤษ จึงเห็นเด้ง -->
     <!-- ถ้า dashboard.js พัง ตัวจับเวลาจะเปิดหน้าให้เองใน 3 วินาที -->
-      <style id="la-boot-hide">body{opacity:0}#la-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'Plus Jakarta Sans','IBM Plex Sans Thai',system-ui,sans-serif;transition:opacity .3s ease}#la-splash .n{font-weight:800;font-size:15px;letter-spacing:-.01em;opacity:.85}#la-splash .b{width:132px;height:3px;border-radius:99px;overflow:hidden}#la-splash .b i{display:block;height:100%;width:38%;border-radius:99px;animation:laslide 1.15s ease-in-out infinite}@keyframes laslide{0%{transform:translateX(-115%)}100%{transform:translateX(330%)}}</style>
+            <!-- ถอดการซ่อนหน้าออกแล้ว — แอปวาดหน้าที่ถูกตั้งแต่เฟรมแรก จึงไม่ต้องรอ -->
+        <style id="la-boot-hide"></style>
     <script>
       (function(){
         var dark=false; try{dark=localStorage.getItem('la_dark')==='1';}catch(e){}
@@ -28,7 +29,7 @@
           d.innerHTML='<svg width="48" height="48" viewBox="0 0 100 100"><circle cx="50" cy="28" r="19" fill="#8B5CF6"/><circle cx="71" cy="43" r="19" fill="#EC4899"/><circle cx="63" cy="69" r="19" fill="#F472B6"/><circle cx="37" cy="69" r="19" fill="#38BDF8"/><circle cx="29" cy="43" r="19" fill="#A78BFA"/><circle cx="50" cy="50" r="13" fill="#F5F3FF"/></svg>'+(nm?'<div class="n">'+nm+'</div>':'')+'<div class="b" style="background:'+tr+'"><i style="background:'+ac+'"></i></div>';
           document.documentElement.appendChild(d);
         }
-        setTimeout(function(){ if(!done) mount(); },600);
+                // ไม่แสดงหน้าโหลดแล้ว — หน้าขึ้นทันที
         var done=false;
         // (ตัวแปร done ย้ายขึ้นไปบนแล้ว)
         window.__laReveal=function(){
