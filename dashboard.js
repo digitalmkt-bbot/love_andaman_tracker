@@ -1722,7 +1722,8 @@
                   if ((b.textContent || '') !== want) b.textContent = want;
                   var css = 'margin-right:8px;padding:9px 16px;border-radius:12px;border:1px solid ' + border +
                                  ';background:transparent;color:' + color + ';font-size:13px;font-weight:600;white-space:nowrap';
-                  if (b.getAttribute('style') !== css) b.style.cssText = css;
+                           // จำค่าที่เขียนไปไว้เอง — เทียบกับ style ตรงๆ ไม่ได้ เพราะเบราว์เซอร์จัดรูปแบบใหม่ (เติมเว้นวรรค) จึงไม่มีทางตรงกัน
+                  if (b.dataset.laCss !== css) { b.style.cssText = css; b.dataset.laCss = css; }
       });
    }
    setInterval(function () { laAddTaskCatButton(); laStyleOptButtons(); }, 700);
