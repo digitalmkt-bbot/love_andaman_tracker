@@ -2435,7 +2435,7 @@ function App() {
     style: {
       color: T.textMuted
     }
-  }, "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 Tasks + Planning Posts \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \xB7 ", filtered.length, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")), React.createElement(ExportButton, {
+  }, "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 Tasks + Planners \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \xB7 ", filtered.length, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")), React.createElement(ExportButton, {
     label: "Export Tracking",
     onClick: function onClick() {
       return exportToCSV(filtered, [{
@@ -2659,7 +2659,7 @@ function Sidebar(_ref21) {
     badge: stats.total
   }, {
     id: 'planning',
-    label: 'Planning Post',
+    label: 'Planner',
     icon: CalendarRange
   }, {
     id: 'pr-jobs',
@@ -3775,7 +3775,7 @@ function PlanningPostSummary(_ref38) {
     style: {
       color: T.text
     }
-  }, "\u0E2A\u0E23\u0E38\u0E1B Planning Post"), React.createElement("div", {
+  }, "\u0E2A\u0E23\u0E38\u0E1B\u0E41\u0E1C\u0E19\u0E07\u0E32\u0E19"), React.createElement("div", {
     className: "text-xs mt-0.5",
     style: {
       color: T.textMuted
@@ -4499,7 +4499,7 @@ function PostCard(_ref46) {
       color: T.navy,
       backgroundColor: T.pillBlue
     }
-  }, "Planning Post"), React.createElement("span", {
+  }, "Planner"), React.createElement("span", {
     className: "text-xs font-semibold px-2.5 py-1 rounded-md",
     style: {
       color: ch.color,
@@ -5237,7 +5237,7 @@ function BackupModal(_ref50) {
   });
   var scopeLabel = {
     all: 'ทั้งหมด (Tasks + Posts + Jobs + Team)',
-    posts: 'Planning Posts เท่านั้น',
+    posts: 'Planners เท่านั้น',
     tasks: 'Tasks เท่านั้น',
     jobs: 'PR Jobs เท่านั้น',
     team: 'Team Members เท่านั้น'
@@ -6413,7 +6413,7 @@ function PlanningPost(_ref60) {
     style: {
       color: T.text
     }
-  }, "// Planning Post"), React.createElement("p", {
+  }, "// Planner"), React.createElement("p", {
     className: "text-sm mt-1",
     style: {
       color: T.textMuted
@@ -6917,7 +6917,7 @@ function PostModal(_ref65) {
     style: {
       color: T.text
     }
-  }, post ? 'แก้ไข Planning Post' : 'เพิ่ม Planning Post'), React.createElement("button", {
+  }, post ? 'แก้ไข Planner' : 'เพิ่ม Planner'), React.createElement("button", {
     onClick: onClose,
     className: "p-1.5 rounded-lg hover:bg-black/5"
   }, React.createElement(X, {
@@ -7359,7 +7359,7 @@ function PerformanceDashboard(_ref66) {
     style: {
       color: T.textMuted
     }
-  }, "KPI & \u0E1C\u0E25\u0E07\u0E32\u0E19\u0E41\u0E15\u0E48\u0E25\u0E30\u0E04\u0E19 \xB7 Planning Post + Tracking + PR Jobs \xB7 ", totalItems, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", range === 'all' ? ' (ทั้งหมด)' : ' · ' + monthLabel(range)))), React.createElement("div", {
+  }, "KPI & \u0E1C\u0E25\u0E07\u0E32\u0E19\u0E41\u0E15\u0E48\u0E25\u0E30\u0E04\u0E19 \xB7 Planner + Tracking + PR Jobs \xB7 ", totalItems, " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", range === 'all' ? ' (ทั้งหมด)' : ' · ' + monthLabel(range)))), React.createElement("div", {
     className: "rounded-2xl p-4 flex flex-col gap-3",
     style: {
       backgroundColor: T.cardBg,
@@ -7400,7 +7400,7 @@ function PerformanceDashboard(_ref66) {
     style: {
       color: T.textMuted
     }
-  }, "\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"), [['posts', 'Planning Post'], ['tasks', 'Tracking'], ['jobs', 'PR Jobs']].map(function (pair) {
+  }, "\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"), [['posts', 'Planner'], ['tasks', 'Tracking'], ['jobs', 'PR Jobs']].map(function (pair) {
     return React.createElement("button", {
       key: pair[0],
       onClick: function onClick() {
@@ -7588,7 +7588,7 @@ function PerformanceDashboard(_ref66) {
       style: {
         color: T.textMuted
       }
-    }, "Planning Post (", r.posts, ")"), React.createElement("div", {
+    }, "Planner (", r.posts, ")"), React.createElement("div", {
       className: "grid grid-cols-2 gap-2 mb-3"
     }, [['Published', r.pub], ['In Progress', r.inprog], ['Planned', r.planned], ['Cancelled', r.cancelled]].map(function (pair) {
       var meta = POST_STATUSES.find(function (s) {

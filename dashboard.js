@@ -246,7 +246,7 @@
    var PAIRS = [
       ['Dashboard', 'ภาพรวม'],
       ['Tracking', 'ติดตามงาน'],
-      ['Planning Post', 'วางแผนโพสต์'],
+      ['Planner', 'แผนงาน'],
       ['Public Relations Jobs', 'งานประชาสัมพันธ์'],
       ['Report', 'รายงาน'],
       ['Work History', 'ประวัติการทำงาน'],
@@ -351,7 +351,7 @@
 
    // ===== 11. เติมคำแปลที่ขาด + ครอบคลุม props และวันที่ =====
    var EXTRA_PAIRS = [
-      ['Planning Post Summary', 'สรุป Planning Post'],
+      ['Planner Summary', 'สรุปแผนงาน'],
       ['⚠️ No data — press Reload to fetch from Cloud', '⚠️ ไม่พบข้อมูล — กด Reload เพื่อโหลดจาก Cloud'],
       ['Target 8 posts', 'เป้า 8 โพสต์'],
       ['Add New Jobs', 'เพิ่มงาน PR'],
@@ -464,7 +464,7 @@
    var VIEW_SLUGS = [
       ['dashboard', ['Dashboard', 'ภาพรวม']],
       ['tracking', ['Tracking', 'ติดตามงาน']],
-      ['planning', ['Planning Post', 'วางแผนโพสต์']],
+      ['planning', ['Planner', 'แผนงาน']],
       ['pr', ['Public Relations Jobs', 'งานประชาสัมพันธ์']],
       ['report', ['Report', 'รายงาน']],
       ['history', ['Work History', 'ประวัติการทำงาน']]
@@ -1330,7 +1330,7 @@
       ' เสร็จ': ' done',
       'ทั้งหมดในโปรเจกต์: ': 'All in project: ',
       'ตารางวางแผน Social Media — ': 'Social media plan — ',
-      'ติดตาม Tasks + Planning Posts ทั้งหมด · ': 'All Tasks + Planning Posts · ',
+      'ติดตาม Tasks + Planners ทั้งหมด · ': 'All Tasks + Planners · ',
       'ประวัติการทำงานทั้งหมด — โปรเจกต์ ': 'All work history — project ',
       'KPI & ผลงานแต่ละคน · ': 'KPI & individual results · ',
       ' รายการ (ทั้งหมด)': ' items (all)',
@@ -1474,7 +1474,7 @@
    // ชื่อสมาชิกและชื่อหมวดที่ลูกค้าตั้งเองเป็นข้อมูล ไม่แปล
    var MODAL_TR = {
       'เพิ่ม Task ใหม่': 'Add New Task',
-      'เพิ่ม Planning Post': 'Add Planning Post',
+      'เพิ่ม Planner': 'Add Planner',
       'ผู้รับผิดชอบ — กดเลือกได้หลายคน': 'Assignees — select multiple',
       'หมวดหมู่': 'Category',
       'หมวดหมู่ Jobs': 'Job category',
