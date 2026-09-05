@@ -1715,6 +1715,36 @@
       });
    }
    setInterval(function () { laAddTaskCatButton(); laStyleOptButtons(); }, 700);
+
+   // ===== 39. กู้หน้าตาม URL — รอจนแอปพร้อมจริง =====
+   // ส่วนที่ 37 กดเมนูตั้งแต่แอปยังไม่พร้อม คลิกจึงไม่ติด แล้วยอมแพ้ก่อน
+   // หน้าหนักอย่างติดตามงานใช้เวลาเกิน 25 วินาที — ตัวนี้จึงตรวจทุกวินาทีจนกว่า 2 นาที
+   var rvTicks = 0;
+   var rvDone = false;
+   function laRestoreView2() {
+      if (rvDone) return;
+      rvTicks++;
+      if (rvTicks > 120) { rvDone = true; return; }
+      if (document.querySelector('#la-login')) { rvDone = true; return; }
+      var s = (location.hash || '').slice(1);
+      if (!(s in VIEW_INDEX) || s === 'dashboard') { rvDone = true; return; }
+      var nav = document.querySelectorAll('aside.fixed.left-0 nav button');
+      if (nav.length < 6) return;
+      var btn = nav[VIEW_INDEX[s]];
+      if (!btn) return;
+      var want = (btn.textContent || '').replace(/[0-9]+/g, '').trim();
+      var h2s = document.querySelectorAll('h2');
+      for (var i = 0; i < h2s.length; i++) {
+         if (String(h2s[i].className).indexOf('text-2xl') === -1) continue;
+         if ((h2s[i].textContent || '').trim() === want) { rvDone = true; return; }
+         break;
+      }
+      navSuppress = true;
+      btn.click();
+      setTimeout(function () { navSuppress = false; }, 300);
+   }
+   setInterval(laRestoreView2, 1000);
+   
    
    
    
