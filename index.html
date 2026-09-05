@@ -28,9 +28,9 @@
           d.innerHTML='<svg width="48" height="48" viewBox="0 0 100 100"><circle cx="50" cy="28" r="19" fill="#8B5CF6"/><circle cx="71" cy="43" r="19" fill="#EC4899"/><circle cx="63" cy="69" r="19" fill="#F472B6"/><circle cx="37" cy="69" r="19" fill="#38BDF8"/><circle cx="29" cy="43" r="19" fill="#A78BFA"/><circle cx="50" cy="50" r="13" fill="#F5F3FF"/></svg>'+(nm?'<div class="n">'+nm+'</div>':'')+'<div class="b" style="background:'+tr+'"><i style="background:'+ac+'"></i></div>';
           document.documentElement.appendChild(d);
         }
-        mount();
-        document.addEventListener('DOMContentLoaded', mount);
+        setTimeout(function(){ if(!done) mount(); },600);
         var done=false;
+        // (ตัวแปร done ย้ายขึ้นไปบนแล้ว)
         window.__laReveal=function(){
           if(done) return; done=true;
           if(document.body){ document.body.style.transition='opacity .3s ease'; document.body.style.opacity='1'; }
@@ -41,7 +41,7 @@
         setTimeout(function(){ window.__laReveal(); },3500);
       })();
     </script>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ตัด Tailwind CDN ออก (398 KB + คอมไพล์ในเบราว์เซอร์ทุกครั้ง) — ใช้ styles.css 21 KB แทน -->
 
   <!-- React + Babel -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
