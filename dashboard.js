@@ -348,6 +348,15 @@
    }
    addLangSwitch();
    setInterval(addLangSwitch, 700);
+   // เฝ้าดู DOM เพื่อวางปุ่มทันทีที่ช่องค้นหาโผล่ ไม่ต้องรอรอบจับเวลา 700 มิลลิวินาที
+   // ตัวจับเวลาด้านบนยังอยู่เป็นตัวสำรอง เผื่อเบราว์เซอร์ไม่รองรับ MutationObserver
+   if (window.MutationObserver) {
+      var langMo = new MutationObserver(function () {
+         addLangSwitch();
+         if (document.querySelector('.la-lang')) langMo.disconnect();
+      });
+      langMo.observe(document.documentElement, { childList: true, subtree: true });
+   }
 
    // ===== 11. เติมคำแปลที่ขาด + ครอบคลุม props และวันที่ =====
    var EXTRA_PAIRS = [
@@ -821,10 +830,10 @@
       var repaintTries = 0;
       var repaintTimer = setInterval(function () {
          repaintTries++;
-         if (repaintTries > 20) { clearInterval(repaintTimer); return; }
+         if (repaintTries > 50) { clearInterval(repaintTimer); return; }
          if (document.querySelector('#la-login')) return;
          if (forceRepaint()) clearInterval(repaintTimer);
-      }, 400);
+      }, 150);
    // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
 
       // ===== 19. ปุ่มเปลี่ยนรูป — สร้างผ่าน React ไม่แตะ DOM =====
@@ -1162,6 +1171,15 @@
    }
    addThemeToggle();
    setInterval(addThemeToggle, 900);
+   // ปุ่มนี้ต้องรอปุ่ม TH / EN ก่อน เดิมจึงบวกกันเป็นเกือบ 1.6 วินาที
+   // เฝ้าดู DOM แล้ววางทันทีที่ .la-lang โผล่ ตัวจับเวลาด้านบนเป็นตัวสำรอง
+   if (window.MutationObserver) {
+      var themeMo = new MutationObserver(function () {
+         addThemeToggle();
+         if (document.querySelector('.la-theme')) themeMo.disconnect();
+      });
+      themeMo.observe(document.documentElement, { childList: true, subtree: true });
+   }
 
    // ===== 25. Dark Mode ชุดสีจาก Reference =====
    // ชุดเดิมใช้สูตรคำนวณสี ผลออกมาหม่นเป็นสีน้ำตาลเขียว
