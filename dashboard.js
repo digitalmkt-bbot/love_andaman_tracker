@@ -1707,16 +1707,22 @@
       var border = dark ? '#7450E5' : '#A5B4FC';
       var color = dark ? '#B9A9FF' : '#4F46E5';
       var spec = [
-         ['la-optbtn-job', '⚙ จัดการหมวดหมู่'],
-         ['la-optbtn-topic', '⚙ จัดการ Post Topic'],
-         ['la-optbtn-task', '⚙ จัดการหมวดหมู่']
+                  ['la-optbtn-job', '⚙ จัดการหมวดหมู่', '⚙ Manage Categories'],
+                  ['la-optbtn-topic', '⚙ จัดการ Post Topic', '⚙ Manage Post Topics'],
+                  ['la-optbtn-task', '⚙ จัดการหมวดหมู่', '⚙ Manage Categories']
          ];
       spec.forEach(function (p) {
          var b = document.getElementById(p[0]);
          if (!b) return;
-         b.textContent = p[1];
-         b.style.cssText = 'margin-right:8px;padding:9px 16px;border-radius:12px;border:1px solid ' + border +
-            ';background:transparent;color:' + color + ';font-size:13px;font-weight:600;white-space:nowrap';
+                  // ป้ายตามภาษาที่เลือก — เดิมเขียนไทยตายตัว
+                  var lg = 'th';
+                  try { lg = localStorage.getItem('la_lang') || 'th'; } catch (e) {}
+                  var want = lg === 'en' ? p[2] : p[1];
+                  // เขียนเฉพาะตอนค่าเปลี่ยนจริง — เดิมเขียนทับทุก 0.7 วินาที ปุ่มจึงกระตุก
+                  if ((b.textContent || '') !== want) b.textContent = want;
+                  var css = 'margin-right:8px;padding:9px 16px;border-radius:12px;border:1px solid ' + border +
+                                 ';background:transparent;color:' + color + ';font-size:13px;font-weight:600;white-space:nowrap';
+                  if (b.getAttribute('style') !== css) b.style.cssText = css;
       });
    }
    setInterval(function () { laAddTaskCatButton(); laStyleOptButtons(); }, 700);
