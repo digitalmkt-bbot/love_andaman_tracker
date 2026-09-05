@@ -170,8 +170,12 @@ button,a[role="button"]{min-height:40px}
        ====================================================================== */
     var LA_DEMO = {
       on: true,
-      maxItems: 50,
+      maxItems: 50,          /* ค่าเริ่มต้น เดี๋ยวถูกทับด้วยค่าจริงของบริษัทตอน poll */
       maxTeam: 5,
+      plan: 'demo',
+      /* ลำดับแพ็กเกจ ใช้ตัดสินว่าจะโชว์การ์ดไหนบ้าง (โชว์เฉพาะที่สูงกว่าของปัจจุบัน) */
+      rank: { demo: 0, trial: 0, starter: 1, business: 2, enterprise: 3 },
+      planName: { demo: 'Demo', trial: 'Demo', starter: 'เริ่มต้น', business: 'ธุรกิจ', enterprise: 'องค์กร' },
       note: 'จ่ายครั้งเดียว ใช้ได้ตลอดไป · ไม่มีค่ารายเดือน ไม่มีการตัดบัตรอัตโนมัติ',
       /* ┌── ใส่ลิงก์สั่งซื้อของแต่ละแพ็กเกจที่ url ─────────────────────┐
          │  เว้นว่างไว้ = ปุ่มจะกดแล้วไม่เกิดอะไรขึ้น                   │
@@ -180,6 +184,7 @@ button,a[role="button"]{min-height:40px}
       plans: [
         {
           name: 'เริ่มต้น',
+          rank: 1,
           seats: 'ใช้ได้ไม่เกิน 10 คน',
           was: '5,900',
           price: '990',
@@ -193,6 +198,7 @@ button,a[role="button"]{min-height:40px}
         },
         {
           name: 'ธุรกิจ',
+          rank: 2,
           seats: 'ใช้ได้ไม่เกิน 20 คน',
           was: '9,900',
           price: '2,590',
@@ -211,6 +217,7 @@ button,a[role="button"]{min-height:40px}
         },
         {
           name: 'องค์กร',
+          rank: 3,
           seats: 'มากกว่า 20 คน หรือหลายสาขา',
           priceText: 'ประเมินงาน',
           sub: 'ตามขอบเขตที่ตกลง',
@@ -226,6 +233,15 @@ button,a[role="button"]{min-height:40px}
         }
       ]
     };
+
+    /* รับเพดานจริงของบริษัทมาทับค่าเริ่มต้น — อัปเกรดแล้วขยายเองภายใน 1 รอบ poll
+       ถ้าอ่านไม่ได้ (สิทธิ์ไม่ถึง / คอลัมน์ยังไม่มี) ก็ใช้ค่าเดิมต่อ ไม่พัง */
+    function laApplyLimits(org) {
+      if (!org) return;
+      if (typeof org.item_limit === 'number' && org.item_limit > 0) LA_DEMO.maxItems = org.item_limit;
+      if (typeof org.seat_limit === 'number' && org.seat_limit > 0) LA_DEMO.maxTeam = org.seat_limit;
+      if (org.plan) LA_DEMO.plan = org.plan;
+    }
 
     /* นับของที่มีอยู่ทุกครั้งที่ดึงข้อมูลจากเซิร์ฟเวอร์ */
     var _laKnown = {}, _laItems = 0, _laTeam = 0;
@@ -289,11 +305,16 @@ button,a[role="button"]{min-height:40px}
     function laShowQuota(kind) {
       if (document.querySelector('.la-quota-bg')) return;
       laQuotaCss();
+      var pname = LA_DEMO.planName[LA_DEMO.plan] || LA_DEMO.plan;
       var head = kind === 'team'
         ? ['เพิ่มสมาชิกทีมได้ครบ ' + LA_DEMO.maxTeam + ' คนแล้ว',
-           'แพ็กเกจ Demo เพิ่มได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) อัปเกรดเพื่อเพิ่มทีมได้มากขึ้น']
+           'แพ็กเกจ' + pname + ' เพิ่มได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) อัปเกรดเพื่อเพิ่มทีมได้มากขึ้น']
         : ['ใส่งานได้ครบ ' + LA_DEMO.maxItems + ' รายการแล้ว',
-           'แพ็กเกจ Demo ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้มากขึ้น'];
+           'แพ็กเกจ' + pname + ' ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้มากขึ้น'];
+      /* โชว์เฉพาะแพ็กเกจที่สูงกว่าของปัจจุบัน อยู่ธุรกิจแล้วไม่ต้องเห็นเริ่มต้นอีก */
+      var myRank = LA_DEMO.rank[LA_DEMO.plan];
+      if (typeof myRank !== 'number') myRank = 0;
+      var offer = (LA_DEMO.plans || []).filter(function (pl) { return (pl.rank || 0) > myRank; });
 
       var bg = document.createElement('div');
       bg.className = 'la-quota-bg';
@@ -306,7 +327,7 @@ button,a[role="button"]{min-height:40px}
       box.appendChild(h); box.appendChild(lead); if (LA_DEMO.note) box.appendChild(note);
 
       var wrap = document.createElement('div'); wrap.className = 'la-qp';
-      (LA_DEMO.plans || []).forEach(function (pl) {
+      offer.forEach(function (pl) {
         var c = document.createElement('div');
         c.className = 'la-qc' + (pl.best ? ' best' : '');
         if (pl.best) { var tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = 'แนะนำ'; c.appendChild(tg); }
@@ -330,7 +351,13 @@ button,a[role="button"]{min-height:40px}
         c.appendChild(go);
         wrap.appendChild(c);
       });
-      box.appendChild(wrap);
+      if (offer.length) box.appendChild(wrap);
+      else {
+        var top = document.createElement('p');
+        top.className = 'lead';
+        top.textContent = 'คุณใช้แพ็กเกจสูงสุดอยู่แล้ว ติดต่อทีมงานเพื่อขยายเพดานเพิ่ม';
+        box.appendChild(top);
+      }
 
       var no = document.createElement('button');
       no.className = 'no'; no.type = 'button'; no.textContent = 'ไว้ก่อน';
@@ -350,7 +377,10 @@ button,a[role="button"]{min-height:40px}
         laFetch(LA_API + '/posts' + q).then(function (r) { return r.json(); }),
         laFetch(LA_API + '/jobs' + q).then(function (r) { return r.json(); }),
         laFetch(LA_API + '/projects?order=created_at').then(function (r) { return r.json(); }),
-        laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
+        laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); }),
+        /* เพดานของบริษัทนี้ — ต่อท้ายไว้ ตัวอื่นจะได้ไม่เลื่อนตำแหน่ง */
+        laFetch(LA_API + '/orgs?select=plan,seat_limit,item_limit&limit=1')
+          .then(function (r) { return r.json(); }).catch(function () { return []; })
       ]).then(function (res) {
         var cur = null; try { cur = localStorage.getItem(LA_CURKEY) || null; } catch (e) {}
         var st = {
@@ -362,6 +392,7 @@ button,a[role="button"]{min-height:40px}
           currentProjectId: cur,
           _exists: true
         };
+        laApplyLimits(res[5] && res[5][0]);
         laCountQuota(st);
         return st;
       });
