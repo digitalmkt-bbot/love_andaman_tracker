@@ -34,6 +34,19 @@ ALTER TABLE orgs ADD CONSTRAINT orgs_plan_chk
 UPDATE orgs SET plan = 'demo' WHERE plan = 'trial';
 
 -- ── 3) ปลดวันหมดอายุให้ทุกบัญชี ────────────────────────────
+-- เก็บค่าเดิมไว้ก่อน เพราะ UPDATE ทับแล้วกู้คืนไม่ได้
+-- ถ้าเปลี่ยนใจอยากได้วันหมดอายุเดิมกลับมา สั่ง
+--   UPDATE orgs o SET expires_at = b.expires_at
+--     FROM orgs_expiry_backup b WHERE b.id = o.id;
+CREATE TABLE IF NOT EXISTS orgs_expiry_backup (
+  id         TEXT PRIMARY KEY,
+  expires_at TIMESTAMPTZ,
+  saved_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO orgs_expiry_backup (id, expires_at)
+SELECT id, expires_at FROM orgs
+ON CONFLICT (id) DO NOTHING;   -- รันซ้ำไม่ทับค่าที่เก็บไว้รอบแรก
+
 -- หมายเหตุ: บรรทัดนี้ปลดให้ "ทุก" บัญชีรวมลูกค้าที่จ่ายเงินแล้วด้วย
 -- ถ้าต้องการปลดเฉพาะบัญชีฟรี ให้เปลี่ยนเป็น
 --   UPDATE orgs SET expires_at = NULL WHERE plan IN ('demo','trial');
