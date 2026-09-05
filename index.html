@@ -208,6 +208,21 @@ button,a[role="button"]{min-height:40px}
             'ใส่โลโก้และสีของบริษัทคุณ',
             'ช่วยย้ายข้อมูลเดิมจาก Excel'
           ]
+        },
+        {
+          name: 'องค์กร',
+          seats: 'มากกว่า 20 คน หรือหลายสาขา',
+          priceText: 'ประเมินงาน',
+          sub: 'ตามขอบเขตที่ตกลง',
+          cta: 'ขอใบเสนอราคา',
+          url: '',
+          feats: [
+            'ทุกอย่างในแพ็กเกจธุรกิจ',
+            'แยกข้อมูลรายสาขา',
+            'เชื่อมต่อระบบเดิมที่คุณใช้อยู่',
+            'ปรับฟีเจอร์เพิ่มตามที่ต้องการ',
+            'อบรมทีมแบบ on-site'
+          ]
         }
       ]
     };
@@ -230,7 +245,7 @@ button,a[role="button"]{min-height:40px}
       st.textContent = [
         '.la-quota-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;',
         'display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}',
-        '.la-quota{background:#fff;color:#0F1720;border-radius:22px;max-width:720px;width:100%;',
+        '.la-quota{background:#fff;color:#0F1720;border-radius:22px;max-width:940px;width:100%;',
         'padding:26px 24px 20px;box-shadow:0 24px 60px rgba(15,23,42,.3);font-family:inherit;',
         'max-height:92vh;overflow:auto}',
         '.la-quota.d{background:#151B2E;color:#E2E8F0}',
@@ -238,8 +253,8 @@ button,a[role="button"]{min-height:40px}
         '.la-quota .lead{margin:0 0 4px;font-size:13.5px;line-height:1.6;color:#64748B;text-align:center}',
         '.la-quota .note{margin:0 0 18px;font-size:12px;color:#94A3B8;text-align:center}',
         '.la-quota.d .lead{color:#94A3B8}',
-        '.la-qp{display:flex;gap:14px;align-items:stretch}',
-        '@media(max-width:620px){.la-qp{flex-direction:column}}',
+        '.la-qp{display:flex;gap:12px;align-items:stretch}',
+        '@media(max-width:860px){.la-qp{flex-direction:column}}',
         '.la-qc{flex:1 1 0;border:1px solid #E6E9F2;border-radius:18px;padding:18px 16px;',
         'display:flex;flex-direction:column;position:relative}',
         '.la-quota.d .la-qc{border-color:#2B3448}',
@@ -252,7 +267,8 @@ button,a[role="button"]{min-height:40px}
         '.la-quota.d .la-qc .st{color:#94A3B8}',
         '.la-qc .was{font-size:12px;color:#94A3B8;text-decoration:line-through}',
         '.la-qc.best .was{color:rgba(255,255,255,.65)}',
-        '.la-qc .pz{font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.02em}',
+        '.la-qc .pz{font-size:29px;font-weight:800;line-height:1.15;letter-spacing:-.02em;',
+        'word-break:break-word}',
         '.la-qc .one{font-size:11.5px;color:#64748B;margin-bottom:14px}',
         '.la-qc.best .one{color:rgba(255,255,255,.8)}',
         '.la-quota.d .la-qc .one{color:#94A3B8}',
@@ -298,8 +314,11 @@ button,a[role="button"]{min-height:40px}
         var stt = document.createElement('div'); stt.className = 'st'; stt.textContent = pl.seats;
         c.appendChild(nm); c.appendChild(stt);
         if (pl.was) { var w = document.createElement('div'); w.className = 'was'; w.textContent = 'ปกติ ' + pl.was + ' ฿'; c.appendChild(w); }
-        var pz = document.createElement('div'); pz.className = 'pz'; pz.textContent = pl.price + ' ฿';
-        var one = document.createElement('div'); one.className = 'one'; one.textContent = 'จ่ายครั้งเดียว';
+        /* แพ็กเกจองค์กรไม่มีราคาตายตัว จึงใส่ priceText / sub มาแทนได้ */
+        var pz = document.createElement('div'); pz.className = 'pz';
+        pz.textContent = pl.priceText || (pl.price + ' ฿');
+        var one = document.createElement('div'); one.className = 'one';
+        one.textContent = pl.sub || 'จ่ายครั้งเดียว';
         c.appendChild(pz); c.appendChild(one);
         var ul = document.createElement('ul');
         (pl.feats || []).forEach(function (f) { var li = document.createElement('li'); li.textContent = f; ul.appendChild(li); });
@@ -307,7 +326,7 @@ button,a[role="button"]{min-height:40px}
         var go;
         if (pl.url) { go = document.createElement('a'); go.href = pl.url; go.target = '_blank'; go.rel = 'noopener'; }
         else { go = document.createElement('button'); go.type = 'button'; }
-        go.className = 'go'; go.textContent = 'เลือกแพ็กเกจนี้';
+        go.className = 'go'; go.textContent = pl.cta || 'เลือกแพ็กเกจนี้';
         c.appendChild(go);
         wrap.appendChild(c);
       });
