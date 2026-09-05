@@ -1608,8 +1608,8 @@
    // ปุ่มจัดการ — วางข้างปุ่ม Add ของแต่ละหน้า
    function laAddOptButtons() {
       var spec = [
-         { near: /Add New Jobs/i, id: 'la-optbtn-job', kind: 'job_category', label: '⚙︎ หมวดหมู่', title: 'จัดการหมวดหมู่ Jobs' },
-         { near: /Add Post/i, id: 'la-optbtn-topic', kind: 'post_topic', label: '⚙︎ Post Topic', title: 'จัดการ Post Topic / Type' }
+         { near: /^(Add New Jobs|เพิ่มงาน PR)$/i, id: 'la-optbtn-job', kind: 'job_category', label: '⚙︎ หมวดหมู่', title: 'จัดการหมวดหมู่ Jobs' },
+         { near: /^(Add Post|เพิ่ม Post)$/i, id: 'la-optbtn-topic', kind: 'post_topic', label: '⚙︎ Post Topic', title: 'จัดการ Post Topic / Type' }
          ];
       spec.forEach(function (s) {
          if (document.getElementById(s.id)) return;
