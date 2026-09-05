@@ -258,7 +258,7 @@ app.post('/users', auth, async (req, res) => {
 });
 
 
-/* /signup — ลูกค้าสมัครเอง ทดลองฟรี 14 วัน */
+/* /signup — ลูกค้าสมัครเอง ใช้ฟรีแบบ Demo ไม่มีวันหมดอายุ (5 ที่นั่ง) */
 const signups = new Map();
 function signupThrottled(ip) {
 const now = Date.now();
@@ -290,12 +290,12 @@ const dup = await client.query('SELECT 1 FROM orgs WHERE lower(code) = $1', [org
 if (dup.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'รหัสบริษัทนี้มีคนใช้แล้ว กรุณาเลือกใหม่', field: 'code' }); }
 const orgId = 'org_' + crypto.randomBytes(5).toString('hex');
 const uid = 'u_' + crypto.randomBytes(6).toString('hex');
-await client.query("INSERT INTO orgs (id, code, name, plan, seat_limit, status, expires_at) VALUES ($1, $2, $3, 'trial', 5, 'active', now() + interval '14 days')", [orgId, orgCode, String(company).trim()]);
+await client.query("INSERT INTO orgs (id, code, name, plan, seat_limit, status, expires_at) VALUES ($1, $2, $3, 'demo', 5, 'active', NULL)", [orgId, orgCode, String(company).trim()]);
 await client.query("INSERT INTO users (id, org_id, username, password_hash, role, must_change_password) VALUES ($1, $2, $3, $4, 'admin', false)", [uid, orgId, username, await bcrypt.hash(password, 10)]);
 await client.query('COMMIT');
 // ล็อกอินให้เลย ลูกค้าเข้าใช้งานได้ทันที
 const token = signToken({ id: uid, org_id: orgId, username: username, role: 'admin' });
-res.json({ token: token, expires_in: TTL_HOURS * 3600, user: { id: uid, username: username, role: 'admin', org_id: orgId, must_change_password: false }, org: { id: orgId, code: orgCode, name: String(company).trim(), plan: 'trial', trial_days: 14 } });
+res.json({ token: token, expires_in: TTL_HOURS * 3600, user: { id: uid, username: username, role: 'admin', org_id: orgId, must_change_password: false }, org: { id: orgId, code: orgCode, name: String(company).trim(), plan: 'demo', seat_limit: 5 } });
 } catch (e) {
 await client.query('ROLLBACK').catch(() => {});
 if (e.code === '23505') return res.status(409).json({ error: 'รหัสบริษัทหรือชื่อผู้ใช้นี้มีอยู่แล้ว' });

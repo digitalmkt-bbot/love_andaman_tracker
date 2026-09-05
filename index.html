@@ -161,6 +161,99 @@ button,a[role="button"]{min-height:40px}
         .then(function (r) { if (!r.ok) throw new Error('patch ' + r.status); });
     }
 
+    /* ===== แพ็กเกจ Demo — โควตาการใช้งาน ===================================
+       ใช้ฟรีไม่มีวันหมดอายุ แลกกับเพดาน 2 อย่าง
+         · งานรวมทุกหัวข้อ (Tracking + Planner + PR Jobs) 50 รายการ
+         · สมาชิกทีม 5 คน
+       จำนวนบัญชีล็อกอินคุมที่ฝั่ง server แล้ว (seat_limit = 5 ใน orgs)
+       การแก้ไขและลบของเดิมไม่ติดโควตา ติดเฉพาะตอน "เพิ่มใหม่"
+       ====================================================================== */
+    var LA_DEMO = {
+      on: true,
+      maxItems: 50,
+      maxTeam: 5,
+      /* ┌── แก้ 4 บรรทัดนี้ให้เป็นข้อมูลจริงก่อนเปิดขาย ─────────────────┐ */
+      price:    '฿___ / เดือน',
+      priceSub: 'ไม่จำกัดจำนวนงานและสมาชิกทีม',
+      ctaText:  'ติดต่อสั่งซื้อ',
+      ctaUrl:   '',
+      /* └── ctaUrl ว่างไว้ = ไม่ต้องแสดงปุ่ม แสดงแค่ราคา ────────────────┘ */
+    };
+
+    /* นับของที่มีอยู่ทุกครั้งที่ดึงข้อมูลจากเซิร์ฟเวอร์ */
+    var _laKnown = {}, _laItems = 0, _laTeam = 0;
+    function laCountQuota(st) {
+      _laKnown = {};
+      var all = st.tasks.concat(st.posts, st.jobs);
+      for (var i = 0; i < all.length; i++) _laKnown[all[i].id] = 1;
+      _laItems = all.length;
+      _laTeam = (st.team || []).length;
+    }
+
+    /* ป๊อปอัพเตือนตอนใช้เกินโควตา — เขียนด้วย DOM ล้วน ไม่พึ่ง React */
+    function laQuotaCss() {
+      if (document.getElementById('la-quota-css')) return;
+      var st = document.createElement('style');
+      st.id = 'la-quota-css';
+      st.textContent = [
+        '.la-quota-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;',
+        'display:flex;align-items:center;justify-content:center;padding:20px}',
+        '.la-quota{background:#fff;color:#0F1720;border-radius:20px;max-width:380px;width:100%;',
+        'padding:26px 24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.28);',
+        'font-family:inherit;position:relative}',
+        '.la-quota.d{background:#151B2E;color:#E2E8F0}',
+        '.la-quota h3{margin:0 0 6px;font-size:18px;font-weight:800;line-height:1.35}',
+        '.la-quota p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:#64748B}',
+        '.la-quota.d p{color:#94A3B8}',
+        '.la-quota .pr{background:#F1F5FF;border-radius:14px;padding:14px 12px;margin-bottom:16px}',
+        '.la-quota.d .pr{background:#1B2338}',
+        '.la-quota .pr b{display:block;font-size:22px;font-weight:800;color:#4F46E5;line-height:1.3}',
+        '.la-quota.d .pr b{color:#A5B4FC}',
+        '.la-quota .pr span{font-size:12px;color:#64748B}',
+        '.la-quota.d .pr span{color:#94A3B8}',
+        '.la-quota a.cta,.la-quota button.cta{display:block;width:100%;box-sizing:border-box;',
+        'background:#4F46E5;color:#fff;border:0;border-radius:12px;padding:12px;font-size:14px;',
+        'font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:8px}',
+        '.la-quota button.no{background:transparent;border:0;color:#64748B;font-size:13px;',
+        'cursor:pointer;padding:6px;width:100%}'
+        ].join('');
+      document.head.appendChild(st);
+    }
+    function laShowQuota(kind) {
+      if (document.querySelector('.la-quota-bg')) return;
+      laQuotaCss();
+      var head = kind === 'team'
+        ? ['เพิ่มสมาชิกทีมได้ครบแล้ว',
+           'แพ็กเกจ Demo เพิ่มสมาชิกทีมได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) ตอนนี้ครบแล้ว อัปเกรดเพื่อเพิ่มได้ไม่จำกัด']
+        : ['ใส่งานได้ครบ ' + LA_DEMO.maxItems + ' รายการแล้ว',
+           'แพ็กเกจ Demo ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้ไม่จำกัด'];
+      var bg = document.createElement('div');
+      bg.className = 'la-quota-bg';
+      var box = document.createElement('div');
+      box.className = 'la-quota' + (document.body.classList.contains('la-dark') ? ' d' : '');
+      var h = document.createElement('h3'); h.textContent = head[0];
+      var p = document.createElement('p'); p.textContent = head[1];
+      var pr = document.createElement('div'); pr.className = 'pr';
+      var b = document.createElement('b'); b.textContent = LA_DEMO.price;
+      var sub = document.createElement('span'); sub.textContent = LA_DEMO.priceSub;
+      pr.appendChild(b); pr.appendChild(sub);
+      box.appendChild(h); box.appendChild(p); box.appendChild(pr);
+      if (LA_DEMO.ctaUrl) {
+        var a = document.createElement('a');
+        a.className = 'cta'; a.href = LA_DEMO.ctaUrl; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = LA_DEMO.ctaText;
+        box.appendChild(a);
+      }
+      var no = document.createElement('button');
+      no.className = 'no'; no.type = 'button'; no.textContent = 'ไว้ก่อน';
+      function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
+      no.onclick = close;
+      bg.onclick = function (ev) { if (ev.target === bg) close(); };
+      box.appendChild(no);
+      bg.appendChild(box);
+      document.body.appendChild(bg);
+    }
+
     var _laCb = null, _laSig = '', _laTimer = null;
     function laFetchAll() {
       var q = '?deleted=is.false&order=updated_at.desc';
@@ -172,7 +265,7 @@ button,a[role="button"]{min-height:40px}
         laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
       ]).then(function (res) {
         var cur = null; try { cur = localStorage.getItem(LA_CURKEY) || null; } catch (e) {}
-        return {
+        var st = {
           tasks: res[0].map(taskFromApi),
           posts: res[1].map(postFromApi),
           jobs: res[2].map(jobFromApi),
@@ -181,6 +274,8 @@ button,a[role="button"]{min-height:40px}
           currentProjectId: cur,
           _exists: true
         };
+        laCountQuota(st);
+        return st;
       });
     }
     function laPoll(force) {
@@ -201,6 +296,11 @@ button,a[role="button"]{min-height:40px}
         return function () { if (_laTimer) clearInterval(_laTimer); _laCb = null; };
       },
       putRecord: function (field, id, obj) {
+        /* ของเดิมแก้ได้เสมอ ติดโควตาเฉพาะ id ที่ยังไม่เคยมี */
+        if (LA_DEMO.on && !_laKnown[id] && _laItems >= LA_DEMO.maxItems) {
+          laShowQuota('items');
+          return laPoll(true);
+        }
         var t = LA_TBL[field]; var rec = Object.assign({}, obj, { id: id });
         return laUpsert(t.path, [t.to(rec)]).then(function () { return laPoll(true); });
       },
@@ -226,6 +326,11 @@ button,a[role="button"]{min-height:40px}
         return chain.then(function () { return meta ? self.setMeta(meta) : null; }).then(function () { return laPoll(true); });
       },
       setMeta: function (obj) {
+        /* กันเฉพาะตอน "เพิ่ม" ถ้ารายชื่อสั้นลงต้องปล่อยผ่าน ไม่งั้นลบคนออกไม่ได้ */
+        if (LA_DEMO.on && obj.team && obj.team.length > LA_DEMO.maxTeam && obj.team.length > _laTeam) {
+          laShowQuota('team');
+          return laPoll(true);
+        }
         var chain = Promise.resolve();
         if (obj.projects) {
           var pIds = obj.projects.map(function (p) { return '"' + p.id + '"'; }).join(',');
@@ -245,7 +350,13 @@ button,a[role="button"]{min-height:40px}
         return chain.then(function () { return laPoll(true); });
       },
       bulkSet: function (field, map) {
-        var t = LA_TBL[field]; var rows = Object.keys(map).map(function (k) { return t.to(Object.assign({}, map[k], { id: k })); });
+        var t = LA_TBL[field]; var keys = Object.keys(map);
+        if (LA_DEMO.on) {
+          var fresh = 0;
+          for (var bi = 0; bi < keys.length; bi++) if (!_laKnown[keys[bi]]) fresh++;
+          if (fresh && _laItems + fresh > LA_DEMO.maxItems) { laShowQuota('items'); return laPoll(true); }
+        }
+        var rows = keys.map(function (k) { return t.to(Object.assign({}, map[k], { id: k })); });
         return (rows.length ? laUpsert(t.path, rows) : Promise.resolve()).then(function () { return laPoll(true); });
       },
       raw: null,
