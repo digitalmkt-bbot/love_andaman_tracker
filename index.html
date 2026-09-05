@@ -1379,7 +1379,7 @@ function App() {
     _useState42 = _slicedToArray(_useState41, 2),
     showBackupModal = _useState42[0],
     setShowBackupModal = _useState42[1];
-  var _useState43 = useState('dashboard'),
+    var _useState43 = useState((function(){ var h=(location.hash||'').slice(1); return ['dashboard','tracking','planning','pr','report','history'].indexOf(h)>-1 ? h : 'dashboard'; })()),
     _useState44 = _slicedToArray(_useState43, 2),
     view = _useState44[0],
     setView = _useState44[1];
