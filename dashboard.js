@@ -1504,6 +1504,132 @@
       };
       React.__laModalTr = true;
    }
+
+   // ===== 35. หมวดหมู่ Jobs และ Post Topic — ดึงจากฐานข้อมูล =====
+   // เดิมเขียนตายตัวในโค้ด ลูกค้าแก้เองไม่ได้
+   // ตอนนี้เก็บในตาราง options แยกตามบริษัท (RLS)
+   // ลบหมวดได้ทันที — งานเก่าที่ใช้หมวดนั้นเก็บชื่อเดิมไว้ ไม่หาย
+   var OPT_PALETTE = ['#5A4A6A', '#8A6A2E', '#3E5AA0', '#3A3A34', '#2F6F5B', '#8A3E52', '#3E6F8A', '#6A5A2E'];
+   function laOptApi(path, opt) {
+      var t = window.laToken && window.laToken();
+      var o = opt || {};
+      o.headers = Object.assign({ Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, o.headers || {});
+      return fetch(window.LA_CONFIG.api + path, o);
+   }
+   function laLoadOptions() {
+      var t = window.laToken && window.laToken();
+      if (!t) return Promise.resolve(null);
+      return laOptApi('/options?select=id,kind,name,sort&order=sort,id').then(function (r) {
+         if (!r.ok) return null;
+         return r.json();
+      }).then(function (rows) {
+         if (!rows) return null;
+         var jobs = rows.filter(function (x) { return x.kind === 'job_category'; });
+         var tops = rows.filter(function (x) { return x.kind === 'post_topic'; });
+         if (jobs.length && window.JOB_CATEGORIES) {
+            var old = {};
+            window.JOB_CATEGORIES.forEach(function (c) { old[c.name] = c.color; });
+            var next = jobs.map(function (x, i) {
+               return { name: x.name, color: old[x.name] || OPT_PALETTE[i % OPT_PALETTE.length] };
+            });
+            window.JOB_CATEGORIES.length = 0;
+            next.forEach(function (c) { window.JOB_CATEGORIES.push(c); });
+         }
+         if (tops.length && window.POST_TOPICS) {
+            window.POST_TOPICS.length = 0;
+            tops.forEach(function (x) { window.POST_TOPICS.push(x.name); });
+         }
+         return { jobs: jobs.length, topics: tops.length };
+      }).catch(function () { return null; });
+   }
+   laLoadOptions();
+   setTimeout(laLoadOptions, 2500);
+
+   // ===== 36. หน้าจัดการหมวดหมู่ =====
+   function laOptionsUI(kind, title) {
+      laOptApi('/options?kind=eq.' + kind + '&select=id,name,sort&order=sort,id').then(function (r) { return r.json(); }).then(function (rows) {
+         var dark = document.body.classList.contains('la-dark');
+         var bg = dark ? '#1C2338' : '#ffffff';
+         var fg = dark ? '#E9ECF5' : '#0F1720';
+         var bd = dark ? '#2A3350' : '#E2E8F0';
+         var fieldBg = dark ? '#232B42' : '#ffffff';
+         var ov = document.createElement('div');
+         ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,35,.55);display:flex;align-items:center;justify-content:center;z-index:9999';
+         var card = document.createElement('div');
+         card.style.cssText = 'background:' + bg + ';color:' + fg + ';border-radius:18px;width:min(460px,92vw);max-height:80vh;overflow:auto;padding:20px;box-shadow:0 18px 60px rgba(0,0,0,.25)';
+         function rowHtml(r) {
+            return '<div data-id="' + r.id + '" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
+               '<input value="' + String(r.name).replace(/"/g, '&quot;') + '" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid ' + bd + ';background:' + fieldBg + ';color:inherit">' +
+               '<button data-act="del" style="padding:6px 10px;border-radius:8px;background:#FEE2E2;color:#B91C1C;font-size:12px">ลบ</button></div>';
+         }
+         card.innerHTML = '<div style="font-weight:700;font-size:17px;margin-bottom:12px">' + title + '</div>' +
+            '<div id="la-opt-list">' + rows.map(rowHtml).join('') + '</div>' +
+            '<div style="display:flex;gap:8px;margin-top:10px"><input id="la-opt-new" placeholder="พิมพ์ชื่อหมวดใหม่…" style="flex:1;padding:8px 10px;border-radius:10px;border:1px dashed ' + bd + ';background:transparent;color:inherit">' +
+            '<button id="la-opt-add" style="padding:8px 14px;border-radius:10px;background:#6366F1;color:#fff;font-weight:600">+ เพิ่ม</button></div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">' +
+            '<button id="la-opt-close" style="padding:8px 14px">ปิด</button>' +
+            '<button id="la-opt-save" style="padding:8px 16px;border-radius:10px;background:#6366F1;color:#fff;font-weight:700">บันทึก</button></div>';
+         ov.appendChild(card);
+         document.body.appendChild(ov);
+         card.querySelector('#la-opt-close').onclick = function () { ov.remove(); };
+         card.querySelector('#la-opt-add').onclick = function () {
+            var inp = card.querySelector('#la-opt-new');
+            var n = (inp.value || '').trim();
+            if (!n) return;
+            laOptApi('/options', { method: 'POST', headers: { Prefer: 'return=representation' },
+                                  body: JSON.stringify({ kind: kind, name: n, sort: card.querySelectorAll('#la-opt-list [data-id]').length + 1 }) })
+            .then(function (r) { return r.ok ? r.json() : r.text().then(function (t) { throw new Error(t.slice(0, 120)); }); })
+            .then(function (d) { card.querySelector('#la-opt-list').insertAdjacentHTML('beforeend', rowHtml(d[0])); inp.value = ''; })
+            .catch(function (e) { alert('เพิ่มไม่สำเร็จ\n' + e.message); });
+         };
+         card.querySelector('#la-opt-list').onclick = function (ev) {
+            var b = ev.target.closest('[data-act="del"]');
+            if (!b) return;
+            var d = b.closest('[data-id]');
+            laOptApi('/options?id=eq.' + d.dataset.id, { method: 'DELETE' }).then(function (r) {
+               if (r.ok) d.remove(); else alert('ลบไม่สำเร็จ');
+            });
+         };
+         card.querySelector('#la-opt-save').onclick = function () {
+            var items = [].slice.call(card.querySelectorAll('#la-opt-list [data-id]'));
+            var chain = Promise.resolve();
+            items.forEach(function (it, i) {
+               chain = chain.then(function () {
+                  return laOptApi('/options?id=eq.' + it.dataset.id, { method: 'PATCH',
+                                                                      body: JSON.stringify({ name: it.querySelector('input').value.trim(), sort: i + 1 }) });
+               });
+            });
+            chain.then(function () { ov.remove(); location.reload(); });
+         };
+      });
+   }
+   window.__laOptionsUI = laOptionsUI;
+
+   // ปุ่มจัดการ — วางข้างปุ่ม Add ของแต่ละหน้า
+   function laAddOptButtons() {
+      var spec = [
+         { near: /Add New Jobs/i, id: 'la-optbtn-job', kind: 'job_category', label: '⚙︎ หมวดหมู่', title: 'จัดการหมวดหมู่ Jobs' },
+         { near: /Add Post/i, id: 'la-optbtn-topic', kind: 'post_topic', label: '⚙︎ Post Topic', title: 'จัดการ Post Topic / Type' }
+         ];
+      spec.forEach(function (s) {
+         if (document.getElementById(s.id)) return;
+         var bs = document.querySelectorAll('main button');
+         for (var i = 0; i < bs.length; i++) {
+            var t = (bs[i].textContent || '').trim();
+            if (!s.near.test(t) || t.length > 20) continue;
+            var b = document.createElement('button');
+            b.id = s.id;
+            b.textContent = s.label;
+            b.style.cssText = 'margin-right:8px;padding:8px 12px;border-radius:12px;border:1px solid #C7D2FE;background:#EEF2FF;color:#4F46E5;font-size:13px;font-weight:600';
+            b.onclick = function (ev) { ev.preventDefault(); laOptionsUI(s.kind, s.title); };
+            bs[i].parentNode.insertBefore(b, bs[i]);
+            break;
+         }
+      });
+   }
+   setInterval(laAddOptButtons, 800);
+   
+   
    
    
    
