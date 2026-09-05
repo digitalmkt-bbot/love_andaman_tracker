@@ -1786,6 +1786,41 @@
       setTimeout(function () { navSuppress = false; }, 300);
    }
    setInterval(laGoHashDirect, 700);
+
+   // ===== 41. คอยยืนยันหน้าซ้ำ 30 วินาที =====
+   // สาเหตุจริง: หน้าเปลี่ยนสำเร็จแล้ว แต่แอปสลับกลับมาหน้าภาพรวมทีหลัง
+   // ตัวก่อนเห็นว่าสำเร็จแล้วจึงหยุด — ตัวนี้ตรวจซ้ำเรื่อยๆ ไม่หยุดกลางคัน
+   var keepTicks = 0;
+   function laKeepView() {
+      keepTicks++;
+      if (keepTicks > 40) return;
+      if (document.querySelector('#la-login')) return;
+      var s = (location.hash || '').slice(1);
+      if (!(s in VIEW_INDEX) || s === 'dashboard') return;
+      var want = null;
+      for (var vi = 0; vi < VIEW_SLUGS.length; vi++) {
+         if (VIEW_SLUGS[vi][0] === s) want = VIEW_SLUGS[vi][1];
+      }
+      if (!want) return;
+      var lang = 'th';
+      try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
+      var wantTitle = lang === 'en' ? want[0] : want[1];
+      var cur = null;
+      var h2s = document.querySelectorAll('h2');
+      for (var i = 0; i < h2s.length; i++) {
+         if (String(h2s[i].className).indexOf('text-2xl') === -1) continue;
+         cur = (h2s[i].textContent || '').trim();
+         break;
+      }
+      if (cur === wantTitle) return;
+      var fn = window.__laNavGo[s];
+      if (typeof fn !== 'function') return;
+      navSuppress = true;
+      try { fn(); } catch (err) {}
+      setTimeout(function () { navSuppress = false; }, 300);
+   }
+   setInterval(laKeepView, 750);
+   
    
    
    
