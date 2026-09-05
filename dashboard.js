@@ -1905,7 +1905,7 @@ function laSaveProjectName() {
       var t = (bs[i].textContent || '').trim();
       if (!t || t.length > 40) continue;
       if (t === 'Marketing Dept.') continue;
-      if (String(bs[i].className).indexOf('rounded-2xl') === -1) continue;
+            if (String(bs[i].className).indexOf('justify-between') === -1) continue;
       try {
          if (localStorage.getItem('la_project_name') !== t) localStorage.setItem('la_project_name', t);
       } catch (err) {}
