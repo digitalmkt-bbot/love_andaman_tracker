@@ -1796,7 +1796,7 @@
       if (keepTicks > 40) return;
       if (document.querySelector('#la-login')) return;
       var s = (location.hash || '').slice(1);
-      if (!(s in VIEW_INDEX) || s === 'dashboard') return;
+            if (!(s in VIEW_INDEX) || s === 'dashboard') { window.__laViewReady = true; return; }
       var want = null;
       for (var vi = 0; vi < VIEW_SLUGS.length; vi++) {
          if (VIEW_SLUGS[vi][0] === s) want = VIEW_SLUGS[vi][1];
@@ -1812,7 +1812,7 @@
          cur = (h2s[i].textContent || '').trim();
          break;
       }
-      if (cur === wantTitle) return;
+            if (cur === wantTitle) { window.__laViewReady = true; return; }
       var fn = window.__laNavGo[s];
       if (typeof fn !== 'function') return;
       navSuppress = true;
@@ -1904,7 +1904,15 @@ function laReveal() {
    var s = document.getElementById('la-boot-hide');
    if (s && s.parentNode) s.parentNode.removeChild(s);
 }
-setTimeout(laReveal, 400);
+// เปิดหน้าเมื่อถึงหน้าที่ถูกต้องจริง ไม่ใช่เวลาตายตัว — กันหน้าอื่นแทรก
+var revealTries = 0;
+var revealTimer = setInterval(function () {
+   revealTries++;
+   if (window.__laViewReady || revealTries > 30) {
+      clearInterval(revealTimer);
+      laReveal();
+   }
+}, 100);
 
 
 // ===== 45. เรียกหน้าโหลดให้เฟดออกหลังแปลภาษาเสร็จ =====
