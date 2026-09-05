@@ -693,7 +693,10 @@
       ].join('');
    if (!document.getElementById('la-nav-space')) document.head.appendChild(spaceCss);
 
-   window.__laAvatars = {};
+      // จำรูปสมาชิกไว้ในเครื่อง — เดิมต้องรอ API ทุกครั้ง จึงเห็นวงกลมเปล่าก่อน
+      window.__laAvatars = (function () {
+               try { return JSON.parse(localStorage.getItem('la_avatars') || '{}'); } catch (err) { return {}; }
+      })();
    function loadAvatars() {
       if (!window.laToken || !window.LA_CONFIG) return;
       var t;
@@ -704,7 +707,8 @@
       .then(function (d) {
          var m = {};
          (d || []).forEach(function (x) { if (x.avatar) m[x.name] = x.avatar; m['#id:' + x.name] = x.id; });
-         window.__laAvatars = m;
+                     window.__laAvatars = m;
+                     try { localStorage.setItem('la_avatars', JSON.stringify(m)); } catch (err) {}
       })
       .catch(function () {});
    }
