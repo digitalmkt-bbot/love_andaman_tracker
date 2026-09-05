@@ -1765,7 +1765,7 @@
       if (goTicks > 90) { goDone = true; return; }
       if (document.querySelector('#la-login')) return;
       var s = (location.hash || '').slice(1);
-      if (!(s in VIEW_INDEX) || s === 'dashboard') { goDone = true; return; }
+            if (!(s in VIEW_INDEX) || s === 'dashboard') return;
       var want = null;
       for (var vi = 0; vi < VIEW_SLUGS.length; vi++) {
          if (VIEW_SLUGS[vi][0] === s) want = VIEW_SLUGS[vi][1];
