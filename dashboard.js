@@ -802,11 +802,16 @@
          var a = byText(other), b2 = byText(labels);
          if (!a || !b2) return false;
          navSuppress = true;
-         a.click();
-         setTimeout(function () {
-            b2.click();
-            setTimeout(function () { navSuppress = false; }, 300);
-         }, 60);
+                  // เดิมคลิกไปหน้า "ติดตามงาน" แล้วคลิกกลับ "ภาพรวม" — ผู้ใช้จึงเห็นเมนูวิ่งไปมา
+                  // ตอนนี้กดปุ่มของหน้าปัจจุบันซ้ำ — ได้ผลวาดใหม่เหมือนเดิม แต่หน้าไม่เปลี่ยน
+                  var slug = (location.hash || '').slice(1);
+                  var idx = ['dashboard', 'tracking', 'planning', 'pr', 'report', 'history'].indexOf(slug);
+                  if (idx < 0) idx = 0;
+                  var navBtns = document.querySelectorAll('aside.fixed.left-0 nav button');
+                  var self = navBtns[idx];
+                  if (!self) { navSuppress = false; return false; }
+                  self.click();
+                  setTimeout(function () { navSuppress = false; }, 300);
          return true;
       }
       var repaintTries = 0;
