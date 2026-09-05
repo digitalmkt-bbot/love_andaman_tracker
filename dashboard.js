@@ -1820,6 +1820,15 @@
       setTimeout(function () { navSuppress = false; }, 300);
    }
    setInterval(laKeepView, 750);
+
+   // ===== 42. เก็บกวาด — ปิดตัวกู้หน้าซ้ำซ้อน =====
+   // ตอนไล่หาสาเหตุผมเขียนตัวกู้หน้าไว้ 4 ชุด (ส่วน 12, 37, 39, 40)
+   // ตัวที่ใช้ได้จริงคือส่วนที่ 41 — ที่เหลือทำงานซ้อนกันเปล่าๆ จึงปิดทิ้ง
+   // ส่วนที่ 40 ยังต้องเก็บไว้ เพราะเป็นตัวดักเก็บฟังก์ชันเปลี่ยนหน้าที่ส่วน 41 ใช้
+   try { if (typeof restoreTimer !== 'undefined') clearInterval(restoreTimer); } catch (err) {}
+   rvDone = true;
+   goDone = true;
+   
    
    
    
