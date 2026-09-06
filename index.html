@@ -266,6 +266,21 @@ button,a[role="button"]{min-height:40px}
       ]
     };
 
+    /* ดึงเพดานแยกจากข้อมูลหลัก
+       เคยรวมอยู่ใน Promise.all ก้อนเดียวกัน ผลคือหน้าจอค้างที่ "กำลังโหลด..."
+       จนกว่า request นี้จะเสร็จ ทั้งที่หน้าจอไม่ได้ต้องใช้มันในการวาด
+       ค่าเริ่มต้นปลอดภัยอยู่แล้ว (50/5) มาถึงเมื่อไหร่ค่อยขยายให้ */
+    var _laLimitsAt = 0;
+    function laLoadLimits(force) {
+      var now = Date.now();
+      if (!force && now - _laLimitsAt < 20000) return;   // ไม่ต้องถี่ พอ ๆ กับรอบ poll
+      _laLimitsAt = now;
+      laFetch(LA_API + '/orgs?select=plan,seat_limit,item_limit&limit=1')
+        .then(function (r) { return r.json(); })
+        .then(function (d) { laApplyLimits(d && d[0]); })
+        .catch(function () {});
+    }
+
     /* รับเพดานจริงของบริษัทมาทับค่าเริ่มต้น — อัปเกรดแล้วขยายเองภายใน 1 รอบ poll
        ถ้าอ่านไม่ได้ (สิทธิ์ไม่ถึง / คอลัมน์ยังไม่มี) ก็ใช้ค่าเดิมต่อ ไม่พัง */
     function laApplyLimits(org) {
@@ -647,10 +662,7 @@ button,a[role="button"]{min-height:40px}
         laFetch(LA_API + '/posts' + q).then(function (r) { return r.json(); }),
         laFetch(LA_API + '/jobs' + q).then(function (r) { return r.json(); }),
         laFetch(LA_API + '/projects?order=created_at').then(function (r) { return r.json(); }),
-        laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); }),
-        /* เพดานของบริษัทนี้ — ต่อท้ายไว้ ตัวอื่นจะได้ไม่เลื่อนตำแหน่ง */
-        laFetch(LA_API + '/orgs?select=plan,seat_limit,item_limit&limit=1')
-          .then(function (r) { return r.json(); }).catch(function () { return []; })
+        laFetch(LA_API + '/team_members?order=id').then(function (r) { return r.json(); })
       ]).then(function (res) {
         var cur = null; try { cur = localStorage.getItem(LA_CURKEY) || null; } catch (e) {}
         var st = {
@@ -662,12 +674,12 @@ button,a[role="button"]{min-height:40px}
           currentProjectId: cur,
           _exists: true
         };
-        laApplyLimits(res[5] && res[5][0]);
         laCountQuota(st);
         return st;
       });
     }
     function laPoll(force) {
+      laLoadLimits(force);          /* วิ่งคู่ขนาน ไม่รอกัน */
       return laFetchAll().then(function (st) {
         var sig = JSON.stringify([st.tasks, st.posts, st.jobs, st.projects, st.team, st.currentProjectId]);
         if (force || sig !== _laSig) { _laSig = sig; if (_laCb) _laCb(st); }
