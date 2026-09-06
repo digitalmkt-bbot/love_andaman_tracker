@@ -1199,6 +1199,9 @@
       '.la-ubox.d .sub{color:#94A3B8}',
       '.la-urow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EEF1F8}',
       '.la-ubox.d .la-urow{border-color:#2B3448}',
+      '.la-udot{width:34px;height:34px;border-radius:50%;flex:none;display:flex;align-items:center;',
+      'justify-content:center;color:#fff;font-size:14px;font-weight:700;background-size:cover;',
+      'background-position:center}',
       '.la-urow .nm{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}',
       '.la-urow .nm span{display:block;font-size:11.5px;font-weight:400;color:#94A3B8}',
       '.la-urow select{font-family:inherit;font-size:12.5px;padding:5px 8px;border-radius:8px;',
@@ -1252,6 +1255,38 @@
       return false;
    }
 
+   /* อ่าน/เขียนสมาชิกทีมตรงผ่าน PostgREST — ตารางนี้เก็บชื่อ สี รูป ที่งานใช้อ้างอิง */
+   function laTeamApi(path, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign(
+         { 'Authorization': 'Bearer ' + (window.laToken ? window.laToken() : ''), 'Content-Type': 'application/json' },
+         opts.headers || {});
+      return fetch(window.LA_CONFIG.api + path, opts);
+   }
+   function laTeamAdd(name) {
+      return laTeamApi('/team_members?on_conflict=org_id,name', {
+         method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+         body: JSON.stringify([{ name: name, color: null }])
+      });
+   }
+   function laTeamDel(name) {
+      return laTeamApi('/team_members?name=eq.' + encodeURIComponent(name),
+                       { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+   }
+
+   /* คนหนึ่งคน = บัญชีล็อกอินหนึ่งบัญชี + ชื่อในทีมหนึ่งชื่อ
+      บัญชีผู้ใช้เป็นตัวตั้ง ส่วนสมาชิกทีมเดินตาม (เพิ่ม/ถอนตามสถานะใช้งาน)
+      ของเดิมที่มีแต่ชื่อในทีมยังไม่มีบัญชี — จับคู่ด้วยชื่อ แล้วให้กดสร้างบัญชีทีหลังได้ */
+   function laMergePeople(users, team) {
+      var byName = {};
+      users.forEach(function (u) {
+         var nm = (u.display_name || u.username || '').trim();
+         byName[nm] = true; byName[(u.username || '').trim()] = true;
+      });
+      var orphans = team.filter(function (t) { return !byName[(t.name || '').trim()]; });
+      return { users: users, orphans: orphans };
+   }
+
    function laOpenUsers() {
       if (document.querySelector('.la-ubg')) return;
       var me = (window.laUser && window.laUser()) || {};
@@ -1265,86 +1300,121 @@
       var msg = document.createElement('div');
       function say(t, kind) { msg.className = 'la-umsg ' + kind; msg.innerHTML = t; }
       function clear() { msg.className = ''; msg.textContent = ''; }
+      function pwNote(name, pw) {
+         return 'บัญชีของ <b>' + name + '</b> พร้อมแล้ว รหัสผ่านชั่วคราวคือ <code>' + pw +
+                '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก และเขาต้องเปลี่ยนรหัสตอนเข้าครั้งแรก';
+      }
 
-      function draw(d) {
+      /* สีประจำตัวเอาจากจานเดียวกับที่แอปใช้ จะได้ตรงกับวงกลมในหน้างาน */
+      function laDot(name) {
+         var pal = window.TEAM_COLOR_PALETTE || TEAM_COLORS_16;
+         var h = 0;
+         for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+         var d = document.createElement('span');
+         d.className = 'la-udot';
+         d.style.background = pal[h % pal.length];
+         var src = window.__laAvatars && window.__laAvatars[name];
+         if (src) { d.style.backgroundImage = 'url(' + src + ')'; d.textContent = ''; }
+         else d.textContent = (name || '?').trim().charAt(0);
+         return d;
+      }
+      function row(opts) {
+         var r = document.createElement('div');
+         r.className = 'la-urow' + (opts.dim ? ' off' : '');
+         if (opts.name) r.appendChild(laDot(opts.name));
+         var nm = document.createElement('div'); nm.className = 'nm';
+         nm.textContent = opts.title;
+         var meta = document.createElement('span'); meta.textContent = opts.meta;
+         nm.appendChild(meta); r.appendChild(nm);
+         (opts.controls || []).forEach(function (c) { r.appendChild(c); });
+         box.appendChild(r);
+         return r;
+      }
+      function btn(label, fn) {
+         var b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+         b.onclick = fn; return b;
+      }
+
+      function draw(d, team) {
          box.innerHTML = '';
-         var h = document.createElement('h3'); h.textContent = 'จัดการบัญชีผู้ใช้';
+         var h = document.createElement('h3'); h.textContent = 'จัดการทีม';
          var sub = document.createElement('p'); sub.className = 'sub';
-         sub.textContent = 'คนที่ล็อกอินเข้าระบบได้ — คนละส่วนกับสมาชิกทีมที่ไว้มอบหมายงาน';
+         sub.textContent = 'เพิ่มคนที่นี่ที่เดียว — ได้ทั้งบัญชีเข้าระบบ และโผล่ในรายชื่อมอบหมายงานทันที';
          var seat = document.createElement('p'); seat.className = 'la-useat';
-         seat.textContent = 'ใช้ไป ' + d.seats_used + ' จาก ' + d.seat_limit + ' ที่นั่ง';
+         seat.textContent = 'ใช้ไป ' + d.seats_used + ' จาก ' + d.seat_limit + ' คน';
          box.appendChild(h); box.appendChild(sub); box.appendChild(seat);
 
          d.users.forEach(function (u) {
-            var row = document.createElement('div');
-            row.className = 'la-urow' + (u.active ? '' : ' off');
-            var nm = document.createElement('div'); nm.className = 'nm';
-            nm.textContent = u.username + (u.id === me.id ? ' (คุณ)' : '');
-            var meta = document.createElement('span');
-            meta.textContent = (u.display_name ? u.display_name + ' · ' : '') +
-               (u.active ? 'ใช้งานอยู่' : 'ปิดอยู่') +
-               (u.last_login_at ? ' · เข้าล่าสุด ' + new Date(u.last_login_at).toLocaleDateString('th-TH') : ' · ยังไม่เคยเข้า');
-            nm.appendChild(meta); row.appendChild(nm);
-
+            var name = (u.display_name || u.username || '').trim();
+            var ctrl = [];
             var sel = document.createElement('select');
-            ['admin', 'staff', 'viewer'].forEach(function (r) {
-               var o = document.createElement('option'); o.value = r; o.textContent = ROLE_TH[r];
-               if (u.role === r) o.selected = true; sel.appendChild(o);
+            ['admin', 'staff', 'viewer'].forEach(function (rr) {
+               var o = document.createElement('option'); o.value = rr; o.textContent = ROLE_TH[rr];
+               if (u.role === rr) o.selected = true; sel.appendChild(o);
             });
             sel.disabled = u.id === me.id;
             sel.onchange = function () { act(u.id, { role: sel.value }); };
-            row.appendChild(sel);
-
+            ctrl.push(sel);
             if (u.id !== me.id) {
-               var tog = document.createElement('button');
-               tog.textContent = u.active ? 'ปิดบัญชี' : 'เปิดบัญชี';
-               tog.onclick = function () { act(u.id, { active: !u.active }); };
-               row.appendChild(tog);
-               var rst = document.createElement('button');
-               rst.textContent = 'รีเซ็ตรหัส';
-               rst.onclick = function () {
-                  if (!confirm('ตั้งรหัสผ่านใหม่ให้ ' + u.username + '?')) return;
+               ctrl.push(btn(u.active ? 'ปิดบัญชี' : 'เปิดบัญชี', function () {
+                  setActive(u, !u.active, name);
+               }));
+               ctrl.push(btn('รีเซ็ตรหัส', function () {
+                  if (!confirm('ตั้งรหัสผ่านใหม่ให้ ' + name + '?')) return;
                   laUsersApi('/users/' + encodeURIComponent(u.id) + '/reset-password', { method: 'POST' })
-                     .then(function (r) {
-                        say('รหัสผ่านใหม่ของ <b>' + u.username + '</b> คือ <code>' + r.temp_password +
-                            '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก', 'ok');
-                     })
+                     .then(function (r) { say(pwNote(name, r.temp_password), 'ok'); })
                      .catch(function (e) { say(e.message, 'err'); });
-               };
-               row.appendChild(rst);
+               }));
             }
-            box.appendChild(row);
+            if (window.__laAvatars && window.__laAvatars['#id:' + name])
+               ctrl.unshift(btn('รูป', function () { window.__laPickAvatar(name); }));
+            row({
+               name: name,
+               title: name + (u.id === me.id ? ' (คุณ)' : ''),
+               meta: 'เข้าระบบด้วย ' + u.username + ' · ' + (u.active ? 'ใช้งานอยู่' : 'ปิดอยู่') +
+                     (u.last_login_at ? ' · เข้าล่าสุด ' + new Date(u.last_login_at).toLocaleDateString('th-TH') : ' · ยังไม่เคยเข้า'),
+               dim: !u.active, controls: ctrl
+            });
+         });
+
+         /* ชื่อเก่าที่ยังไม่มีบัญชี — มอบหมายงานได้แต่ล็อกอินไม่ได้ */
+         team.orphans.forEach(function (t) {
+            row({
+               name: t.name, title: t.name, dim: true,
+               meta: 'ยังไม่มีบัญชีเข้าระบบ · มอบหมายงานได้อย่างเดียว',
+               controls: [btn('สร้างบัญชีให้', function () { askLogin(t.name); })]
+            });
          });
 
          var add = document.createElement('div'); add.className = 'la-uadd';
-         var iU = document.createElement('input'); iU.placeholder = 'ชื่อผู้ใช้ใหม่';
-         var iN = document.createElement('input'); iN.placeholder = 'ชื่อที่แสดง (ไม่บังคับ)';
+         var iN = document.createElement('input'); iN.placeholder = 'ชื่อสมาชิกใหม่ (เช่น พี่แนน)';
+         var iU = document.createElement('input'); iU.placeholder = 'ชื่อผู้ใช้ตอนล็อกอิน (a-z 0-9)';
          var iR = document.createElement('select');
-         ['staff', 'admin', 'viewer'].forEach(function (r) {
-            var o = document.createElement('option'); o.value = r; o.textContent = ROLE_TH[r]; iR.appendChild(o);
+         ['staff', 'admin', 'viewer'].forEach(function (rr) {
+            var o = document.createElement('option'); o.value = rr; o.textContent = ROLE_TH[rr]; iR.appendChild(o);
          });
          iR.style.cssText = 'font-family:inherit;font-size:13px;padding:9px 11px;border-radius:10px;border:1px solid #E2E8F0';
-         var bAdd = document.createElement('button'); bAdd.textContent = '+ เพิ่ม';
-         bAdd.onclick = function () {
-            var un = iU.value.trim();
-            if (un.length < 3) { say('ชื่อผู้ใช้ต้องยาวอย่างน้อย 3 ตัว', 'err'); return; }
-            bAdd.disabled = true; clear();
-            laUsersApi('/users', { method: 'POST', body: JSON.stringify(
-               { username: un, display_name: iN.value.trim() || null, role: iR.value }) })
-               .then(function (r) {
-                  say('เพิ่ม <b>' + r.username + '</b> แล้ว รหัสผ่านชั่วคราวคือ <code>' + r.temp_password +
-                      '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก และเขาต้องเปลี่ยนรหัสตอนเข้าครั้งแรก', 'ok');
-                  /* draw() วาง msg ตัวเดิมกลับเข้าไปเอง ข้อความจึงอยู่ต่อโดยไม่ต้องโคลน
-                     เคยโคลนไว้ ผลคือขึ้นซ้ำสองกล่อง */
-                  load();
-               })
-               .catch(function (e) {
-                  bAdd.disabled = false;
-                  laSeatFull(e);                // ที่นั่งเต็ม → เด้งป๊อปอัพราคาด้วย
-                  say(e.message, 'err');        // คงข้อความไว้ เผื่อผู้ใช้ปิดป๊อปอัพ
-               });
+         /* เดาชื่อผู้ใช้จากชื่อที่พิมพ์ ถ้าเป็นอังกฤษอยู่แล้ว */
+         iN.oninput = function () {
+            if (iU.dataset.touched) return;
+            var g = iN.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+            iU.value = g;
          };
-         add.appendChild(iU); add.appendChild(iN); add.appendChild(iR); add.appendChild(bAdd);
+         iU.oninput = function () { iU.dataset.touched = '1'; };
+         var bAdd = document.createElement('button'); bAdd.textContent = '+ เพิ่มคน';
+         bAdd.onclick = function () {
+            var nm = iN.value.trim(), un = iU.value.trim().toLowerCase();
+            if (nm.length < 2) { say('กรุณากรอกชื่อที่แสดงในงาน', 'err'); return; }
+            if (!/^[a-z0-9][a-z0-9._-]{2,}$/.test(un)) {
+               say('ชื่อผู้ใช้ต้องเป็น a-z 0-9 อย่างน้อย 3 ตัว (ไทยใช้ไม่ได้ เพราะต้องพิมพ์ตอนล็อกอิน)', 'err');
+               return;
+            }
+            bAdd.disabled = true; clear();
+            createPerson(nm, un, iR.value)
+               .then(function (r) { say(pwNote(nm, r.temp_password), 'ok'); load(); })
+               .catch(function (e) { bAdd.disabled = false; laSeatFull(e); say(e.message, 'err'); });
+         };
+         add.appendChild(iN); add.appendChild(iU); add.appendChild(iR); add.appendChild(bAdd);
          box.appendChild(add);
          box.appendChild(msg);
 
@@ -1353,21 +1423,65 @@
          cl.onclick = close; box.appendChild(cl);
       }
 
+      /* สร้างคน = สร้างบัญชี แล้วเพิ่มชื่อเข้าทีมให้มอบหมายงานได้ทันที */
+      function createPerson(name, username, role) {
+         return laUsersApi('/users', { method: 'POST', body: JSON.stringify(
+                  { username: username, display_name: name, role: role }) })
+            .then(function (r) { return laTeamAdd(name).then(function () { return r; }); });
+      }
+      function askLogin(name) {
+         var g = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+         var un = prompt('ตั้งชื่อผู้ใช้สำหรับ ' + name + ' (a-z 0-9 อย่างน้อย 3 ตัว)', g || '');
+         if (un === null) return;
+         un = un.trim().toLowerCase();
+         if (!/^[a-z0-9][a-z0-9._-]{2,}$/.test(un)) { say('ชื่อผู้ใช้ไม่ถูกต้อง', 'err'); return; }
+         clear();
+         laUsersApi('/users', { method: 'POST', body: JSON.stringify(
+               { username: un, display_name: name, role: 'staff' }) })
+            .then(function (r) { say(pwNote(name, r.temp_password), 'ok'); load(); })
+            .catch(function (e) { laSeatFull(e); say(e.message, 'err'); });
+      }
+      /* ปิดบัญชี = ถอนชื่อออกจากรายการมอบหมายด้วย งานเก่าที่เคยระบุชื่อไว้ยังอยู่เหมือนเดิม */
+      function setActive(u, active, name) {
+         clear();
+         laUsersApi('/users/' + encodeURIComponent(u.id), { method: 'PATCH', body: JSON.stringify({ active: active }) })
+            .then(function () { return active ? laTeamAdd(name) : laTeamDel(name); })
+            .then(function () { load(); })
+            .catch(function (e) { laSeatFull(e); say(e.message, 'err'); });
+      }
       function act(id, body) {
          clear();
          laUsersApi('/users/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body) })
             .then(function () { load(); })
             .catch(function (e) { laSeatFull(e); say(e.message, 'err'); });
       }
-      function load(after) {
-         laUsersApi('/users').then(function (d) { draw(d); if (after) after(); })
-            .catch(function (e) {
-               box.innerHTML = '';
-               var h = document.createElement('h3'); h.textContent = 'จัดการบัญชีผู้ใช้';
-               box.appendChild(h); say(e.message, 'err'); box.appendChild(msg);
-               var cl = document.createElement('button');
-               cl.className = 'la-uclose'; cl.textContent = 'ปิด'; cl.onclick = close; box.appendChild(cl);
+
+      function load() {
+         Promise.all([
+            laUsersApi('/users'),
+            laTeamApi('/team_members?select=name,color&order=id').then(function (r) { return r.json(); })
+         ]).then(function (res) {
+            var d = res[0], team = laMergePeople(d.users, res[1] || []);
+            /* คนที่ใช้งานอยู่ต้องมีชื่อในทีมเสมอ ไม่งั้นมอบหมายงานให้ไม่ได้ */
+            var have = {}; (res[1] || []).forEach(function (t) { have[(t.name || '').trim()] = 1; });
+            var missing = d.users.filter(function (u) {
+               return u.active && !have[(u.display_name || u.username || '').trim()];
             });
+            if (missing.length) {
+               Promise.all(missing.map(function (u) {
+                  return laTeamAdd((u.display_name || u.username || '').trim());
+               })).then(function () { return laTeamApi('/team_members?select=name,color&order=id').then(function (r) { return r.json(); }); })
+                 .then(function (t2) { draw(d, laMergePeople(d.users, t2 || [])); })
+                 .catch(function () { draw(d, team); });
+            } else {
+               draw(d, team);
+            }
+         }).catch(function (e) {
+            box.innerHTML = '';
+            var h = document.createElement('h3'); h.textContent = 'จัดการทีม';
+            box.appendChild(h); say(e.message, 'err'); box.appendChild(msg);
+            box.appendChild(btn('ปิด', close));
+         });
       }
       box.textContent = 'กำลังโหลด…';
       load();
@@ -1380,7 +1494,7 @@
       if (!box || document.querySelector('.la-usr')) return;
       var b = document.createElement('button');
       b.className = 'la-usr'; b.type = 'button';
-      b.title = 'จัดการบัญชีผู้ใช้';
+      b.title = 'จัดการทีม';
       b.textContent = '👥';
       b.onclick = laOpenUsers;
       var anchor = document.querySelector('.la-theme') || box;
@@ -1395,6 +1509,26 @@
       });
       usrMo.observe(document.documentElement, { childList: true, subtree: true });
    }
+
+   /* ปุ่ม "จัดการ" ของเดิมเปิดกล่องที่จัดการแค่ชื่อ ไม่มีบัญชีล็อกอิน
+      พาไปที่กล่องรวมแทน จะได้มีที่จัดการคนอยู่ที่เดียว */
+   function laWireTeamBtn() {
+      var bs = document.querySelectorAll('button');
+      for (var i = 0; i < bs.length; i++) {
+         var b = bs[i];
+         if (b.dataset.laTeam) continue;
+         if (!/members · จัดการ|members · Manage/.test(b.textContent || '')) continue;
+         b.dataset.laTeam = '1';
+         b.addEventListener('click', function (ev) {
+            var me = (window.laUser && window.laUser()) || {};
+            if (me.role !== 'admin') return;        // พนักงานยังเห็นกล่องเดิมได้
+            ev.preventDefault(); ev.stopImmediatePropagation();
+            laOpenUsers();
+         }, true);
+      }
+   }
+   laWireTeamBtn();
+   setInterval(laWireTeamBtn, 700);
 
    // ===== 25. Dark Mode ชุดสีจาก Reference =====
    // ชุดเดิมใช้สูตรคำนวณสี ผลออกมาหม่นเป็นสีน้ำตาลเขียว
