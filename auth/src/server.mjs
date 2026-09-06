@@ -109,7 +109,7 @@ app.use((req, res, next) => {
   if (ORIGINS.includes('*')) res.set('Access-Control-Allow-Origin', '*');
   else if (origin && ORIGINS.includes(origin)) res.set('Access-Control-Allow-Origin', origin);
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
@@ -268,7 +268,7 @@ app.post('/change-password', auth, async (req, res) => {
     await pool.query(
       'UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2',
       [await bcrypt.hash(new_password, 10), req.claims.user_id]);
-    res.json({ ok: true });
+    res.json({ ok: true, must_change_password: false });
   } catch (e) {
     console.error('change-password error:', e.message);
     res.status(500).json({ error: 'ระบบขัดข้อง' });
@@ -448,6 +448,42 @@ app.patch('/users/:id', auth, async (req, res) => {
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('patch user error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  } finally { client.release(); }
+});
+
+/* ── DELETE /users/:id — ลบบัญชีออกจากบริษัท ────────────────
+   ชื่อที่เคยระบุไว้ในงานเก่ายังอยู่ เพราะงานเก็บชื่อเป็นข้อความ ไม่ได้อ้างอิงบัญชี */
+app.delete('/users/:id', auth, async (req, res) => {
+  if (req.claims.user_role !== 'admin')
+    return res.status(403).json({ error: 'เฉพาะแอดมินเท่านั้น' });
+  if (req.params.id === req.claims.user_id)
+    return res.status(400).json({ error: 'ลบบัญชีตัวเองไม่ได้' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [u] } = await client.query(
+      'SELECT id, role, active FROM users WHERE id = $1 AND org_id = $2 FOR UPDATE',
+      [req.params.id, req.claims.org_id]);
+    if (!u) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'ไม่พบผู้ใช้นี้' }); }
+
+    if (u.role === 'admin' && u.active) {
+      const { rows: [{ n }] } = await client.query(
+        `SELECT count(*)::int AS n FROM users
+          WHERE org_id = $1 AND role = 'admin' AND active AND id <> $2`,
+        [req.claims.org_id, u.id]);
+      if (n === 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'ต้องเหลือแอดมินที่ใช้งานได้อย่างน้อย 1 คน' });
+      }
+    }
+    await client.query('DELETE FROM users WHERE id = $1', [u.id]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('delete user error:', e.message);
     res.status(500).json({ error: 'ระบบขัดข้อง' });
   } finally { client.release(); }
 });
