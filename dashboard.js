@@ -820,16 +820,22 @@
          var a = byText(other), b2 = byText(labels);
          if (!a || !b2) return false;
          navSuppress = true;
-                  // เดิมคลิกไปหน้า "ติดตามงาน" แล้วคลิกกลับ "ภาพรวม" — ผู้ใช้จึงเห็นเมนูวิ่งไปมา
-                  // ตอนนี้กดปุ่มของหน้าปัจจุบันซ้ำ — ได้ผลวาดใหม่เหมือนเดิม แต่หน้าไม่เปลี่ยน
-                  var slug = (location.hash || '').slice(1);
-                  var idx = ['dashboard', 'tracking', 'planning', 'pr', 'report', 'history'].indexOf(slug);
-                  if (idx < 0) idx = 0;
-                  var navBtns = document.querySelectorAll('aside.fixed.left-0 nav button');
-                  var self = navBtns[idx];
-                  if (!self) { navSuppress = false; return false; }
-                  self.click();
-                  setTimeout(function () { navSuppress = false; }, 300);
+         /* เคยเปลี่ยนมาเป็น "กดปุ่มของหน้าปัจจุบันซ้ำ" โดยเข้าใจว่าได้ผลวาดใหม่เหมือนกัน
+            แต่ไม่จริง — React เห็นว่า state เดิม เลยข้ามการวาด คอมโพเนนต์ที่เราเขียนทับ
+            จึงไม่เคยถูกหยิบไปใช้ ต้องสลับไปหน้าอื่นก่อนแล้วกดกลับ ถึงจะ mount ใหม่จริง
+            ตัวเรียกจะยิงเข้ามาเฉพาะตอนที่ยังไม่สำเร็จ คนที่ปกติอยู่แล้วจึงไม่เห็นเมนูกระพริบ */
+         var slug = (location.hash || '').slice(1);
+         var idx = ['dashboard', 'tracking', 'planning', 'pr', 'report', 'history'].indexOf(slug);
+         if (idx < 0) idx = 0;
+         var navBtns = document.querySelectorAll('aside.fixed.left-0 nav button');
+         var self = navBtns[idx], away = navBtns[idx === 0 ? 1 : 0];
+         if (!self || !away) { navSuppress = false; return false; }
+         repaintBusy = true;
+         away.click();                                   // ออกไปหน้าอื่นเพื่อบังคับ unmount
+         setTimeout(function () {
+            self.click();                                // แล้วกลับมาหน้าเดิม
+            setTimeout(function () { navSuppress = false; repaintBusy = false; }, 300);
+         }, 60);
          return true;
       }
       /* เกณฑ์ว่า "สำเร็จ" ต้องดูที่ผลบนจอ ไม่ใช่ว่า React วาดใหม่หรือกดปุ่มไปแล้ว
@@ -844,16 +850,17 @@
          if (lang === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
          return false;
       }
-      var repaintTries = 0, repaintClicks = 0;
+      var repaintTries = 0, repaintClicks = 0, repaintBusy = false;
       var repaintTimer = setInterval(function () {
          repaintTries++;
          if (repaintApplied()) { clearInterval(repaintTimer); return; }
          /* หน้าที่ยืนยันไม่ได้ (เช่นเลือก EN แล้วอยู่หน้าอื่น) กดสัก 5 ครั้งก็พอ
             ไม่งั้นจะกดรัวไปเรื่อยโดยไม่มีทางรู้ว่าสำเร็จ */
          if (repaintClicks >= 5 || repaintTries > 40) { clearInterval(repaintTimer); return; }
+         if (repaintBusy) return;                        // ลำดับสลับหน้าเดิมยังไม่จบ อย่าซ้อน
          if (document.querySelector('#la-login')) return;
          if (forceRepaint()) repaintClicks++;
-      }, 300);
+      }, 500);
    // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
 
       // ===== 19. ปุ่มเปลี่ยนรูป — สร้างผ่าน React ไม่แตะ DOM =====
