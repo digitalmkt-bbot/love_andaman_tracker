@@ -832,17 +832,26 @@
                   setTimeout(function () { navSuppress = false; }, 300);
          return true;
       }
-      /* เดิมเลิกทำงานทันทีที่ "กดปุ่มสำเร็จ" ซึ่งไม่ใช่สิ่งเดียวกับ "วาดใหม่สำเร็จ"
-         ถ้ากดแล้ว React ไม่วาด (เช่นกดหน้าที่เปิดอยู่แล้ว) จะค้างเป็นหน้าดั้งเดิมถาวร
-         ตอนนี้วัดที่ __laRenders และกดซ้ำจนกว่าจะวาดจริง */
-      var repaintTries = 0;
+      /* เกณฑ์ว่า "สำเร็จ" ต้องดูที่ผลบนจอ ไม่ใช่ว่า React วาดใหม่หรือกดปุ่มไปแล้ว
+         แอปวาดใหม่เองตลอดเวลาด้วยเหตุผลของมัน แต่ตราบใดที่ต้นทางไม่ถูก mount ใหม่
+         มันก็ยังใช้คอมโพเนนต์ตัวเดิมที่จับไว้ก่อนเราเขียนทับ
+         จึงต้องเช็กของที่มองเห็นได้จริง: การ์ดที่เราวาดเอง หรือเมนูที่ถูกแปลแล้ว */
+      function repaintApplied() {
+         var t = document.body.innerText || '';
+         if (/Plan\. Prioritize/.test(t)) return true;                 // การ์ดที่เขียนทับ
+         if (LANG === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
+         return false;
+      }
+      var repaintTries = 0, repaintClicks = 0;
       var repaintTimer = setInterval(function () {
          repaintTries++;
-         if (window.__laRenders > 0) { clearInterval(repaintTimer); return; }   // วาดแล้วจริง
-         if (repaintTries > 120) { clearInterval(repaintTimer); return; }        // ยอมแพ้ที่ 18 วินาที
+         if (repaintApplied()) { clearInterval(repaintTimer); return; }
+         /* หน้าที่ยืนยันไม่ได้ (เช่นเลือก EN แล้วอยู่หน้าอื่น) กดสัก 5 ครั้งก็พอ
+            ไม่งั้นจะกดรัวไปเรื่อยโดยไม่มีทางรู้ว่าสำเร็จ */
+         if (repaintClicks >= 5 || repaintTries > 40) { clearInterval(repaintTimer); return; }
          if (document.querySelector('#la-login')) return;
-         forceRepaint();
-      }, 150);
+         if (forceRepaint()) repaintClicks++;
+      }, 300);
    // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
 
       // ===== 19. ปุ่มเปลี่ยนรูป — สร้างผ่าน React ไม่แตะ DOM =====
