@@ -185,9 +185,14 @@
       }
       return out;
    }
+   /* นับว่า React วาดใหม่ไปกี่ครั้ง "หลังจาก" เราแทรกตัวดักแล้ว
+      เป็นหลักฐานเดียวที่เชื่อได้ว่าคอมโพเนนต์ที่เราเขียนทับมีผลจริง
+      ถ้าเลขนี้ยังเป็น 0 แปลว่าหน้าที่เห็นอยู่คือของดั้งเดิมล้วน ๆ */
+   window.__laRenders = window.__laRenders || 0;
    if (React && !React.__laMapped) {
       var origCreate = React.createElement;
       React.createElement = function (type, props) {
+         window.__laRenders++;
          if (props && props.style && typeof props.style === 'object') {
             var changed = null;
             for (var k in props.style) {
@@ -827,12 +832,16 @@
                   setTimeout(function () { navSuppress = false; }, 300);
          return true;
       }
+      /* เดิมเลิกทำงานทันทีที่ "กดปุ่มสำเร็จ" ซึ่งไม่ใช่สิ่งเดียวกับ "วาดใหม่สำเร็จ"
+         ถ้ากดแล้ว React ไม่วาด (เช่นกดหน้าที่เปิดอยู่แล้ว) จะค้างเป็นหน้าดั้งเดิมถาวร
+         ตอนนี้วัดที่ __laRenders และกดซ้ำจนกว่าจะวาดจริง */
       var repaintTries = 0;
       var repaintTimer = setInterval(function () {
          repaintTries++;
-         if (repaintTries > 50) { clearInterval(repaintTimer); return; }
+         if (window.__laRenders > 0) { clearInterval(repaintTimer); return; }   // วาดแล้วจริง
+         if (repaintTries > 120) { clearInterval(repaintTimer); return; }        // ยอมแพ้ที่ 18 วินาที
          if (document.querySelector('#la-login')) return;
-         if (forceRepaint()) clearInterval(repaintTimer);
+         forceRepaint();
       }, 150);
    // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
 
