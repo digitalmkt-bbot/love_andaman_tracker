@@ -839,7 +839,9 @@
       function repaintApplied() {
          var t = document.body.innerText || '';
          if (/Plan\. Prioritize/.test(t)) return true;                 // การ์ดที่เขียนทับ
-         if (LANG === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
+         var lang = 'th';
+         try { lang = localStorage.getItem('la_lang') || 'th'; } catch (e) {}
+         if (lang === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
          return false;
       }
       var repaintTries = 0, repaintClicks = 0;
