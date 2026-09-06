@@ -237,6 +237,10 @@
             break;
          }
       }
+      /* ระหว่างที่ตัวบังคับวาดใหม่กำลังสลับหน้าอยู่ อย่าเพิ่งขยับระยะขอบขวา
+         หน้าที่สลับไปชั่วขณะไม่มีแผงขวา ถ้าถอดระยะออกตอนนั้น จะเห็นการ์ดกระโดด
+         ไปทับใต้ปฏิทินแวบหนึ่ง เดี๋ยวกลับมาหน้าเดิมแล้วค่อยคำนวณใหม่ */
+      if (repaintBusy) return;
       var right = document.querySelector('aside[class*="right-0"]');
       document.body.classList.toggle('la-no-right', !right);
    }
