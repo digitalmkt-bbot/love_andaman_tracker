@@ -834,6 +834,9 @@
          away.click();                                   // ออกไปหน้าอื่นเพื่อบังคับ unmount
          setTimeout(function () {
             self.click();                                // แล้วกลับมาหน้าเดิม
+            /* หน้าที่สลับไปไม่มีแผงขวา syncLayout จึงถอดระยะเว้นขวาออกชั่วขณะ
+               ถ้ารอรอบถัดไป (500ms) จะเห็นการ์ดล้นไปใต้ปฏิทินแวบหนึ่ง — เรียกทันทีเลย */
+            if (typeof syncLayout === 'function') { syncLayout(); setTimeout(syncLayout, 80); }
             setTimeout(function () { navSuppress = false; repaintBusy = false; }, 300);
          }, 60);
          return true;
