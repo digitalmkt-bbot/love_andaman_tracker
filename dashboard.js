@@ -1321,8 +1321,9 @@
                .then(function (r) {
                   say('เพิ่ม <b>' + r.username + '</b> แล้ว รหัสผ่านชั่วคราวคือ <code>' + r.temp_password +
                       '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก และเขาต้องเปลี่ยนรหัสตอนเข้าครั้งแรก', 'ok');
-                  var keep = msg.cloneNode(true);
-                  load(function () { box.insertBefore(keep, box.querySelector('.la-uclose')); });
+                  /* draw() วาง msg ตัวเดิมกลับเข้าไปเอง ข้อความจึงอยู่ต่อโดยไม่ต้องโคลน
+                     เคยโคลนไว้ ผลคือขึ้นซ้ำสองกล่อง */
+                  load();
                })
                .catch(function (e) { bAdd.disabled = false; say(e.message, 'err'); });
          };
