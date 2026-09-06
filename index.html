@@ -377,7 +377,13 @@ button,a[role="button"]{min-height:40px}
       if (document.querySelector('.la-quota-bg')) return;
       laQuotaCss();
       var pname = (laLang() === 'en' ? LA_DEMO.planNameEn : LA_DEMO.planName)[LA_DEMO.plan] || LA_DEMO.plan;
-      var head = kind === 'team'
+      var head = kind === 'seats'
+        ? (laLang() === 'en'
+            ? ['All ' + LA_DEMO.maxTeam + ' login seats are used',
+               'The ' + pname + ' plan includes ' + LA_DEMO.maxTeam + ' accounts that can sign in (you included). Upgrade to add more.']
+            : ['ที่นั่งบัญชีผู้ใช้เต็มแล้ว',
+               'แพ็กเกจ' + pname + ' ให้คนเข้าระบบได้ ' + LA_DEMO.maxTeam + ' บัญชี (รวมคุณ) อัปเกรดเพื่อเพิ่มคนเข้าระบบได้มากขึ้น'])
+        : kind === 'team'
         ? (laLang() === 'en'
             ? ['All ' + LA_DEMO.maxTeam + ' team seats are used',
                'The ' + pname + ' plan includes ' + LA_DEMO.maxTeam + ' people (you included). Upgrade to add more.']

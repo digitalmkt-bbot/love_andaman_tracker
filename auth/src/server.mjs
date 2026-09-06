@@ -295,7 +295,7 @@ app.post('/users', auth, async (req, res) => {
 
     if (n >= org.seat_limit) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: `ที่นั่งเต็มแล้ว (${org.seat_limit} คน) กรุณาอัปเกรดแพ็กเกจ` });
+      return res.status(409).json({ error: `ที่นั่งเต็มแล้ว (${org.seat_limit} คน) กรุณาอัปเกรดแพ็กเกจ`, code: 'seat_full' });
     }
 
     const pw = crypto.randomBytes(9).toString('base64url');
@@ -436,7 +436,7 @@ app.patch('/users/:id', auth, async (req, res) => {
         'SELECT count(*)::int AS n FROM users WHERE org_id = $1 AND active', [req.claims.org_id]);
       if (n >= org.seat_limit) {
         await client.query('ROLLBACK');
-        return res.status(409).json({ error: `ที่นั่งเต็มแล้ว (${org.seat_limit} คน) กรุณาอัปเกรดแพ็กเกจ` });
+        return res.status(409).json({ error: `ที่นั่งเต็มแล้ว (${org.seat_limit} คน) กรุณาอัปเกรดแพ็กเกจ`, code: 'seat_full' });
       }
     }
 

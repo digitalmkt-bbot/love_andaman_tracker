@@ -1233,10 +1233,23 @@
          opts.headers || {});
       return fetch((window.LA_CONFIG && window.LA_CONFIG.auth) + path, opts).then(function (r) {
          return r.json().catch(function () { return {}; }).then(function (d) {
-            if (!r.ok) throw new Error(d.error || ('ผิดพลาด ' + r.status));
+            if (!r.ok) {
+               var err = new Error(d.error || ('ผิดพลาด ' + r.status));
+               err.code = d.code;          // ให้ผู้เรียกแยกได้ว่าเป็นที่นั่งเต็ม
+               throw err;
+            }
             return d;
          });
       });
+   }
+
+   /* ที่นั่งบัญชีผู้ใช้เช็กฝั่งเซิร์ฟเวอร์ คนละทางกับลิมิตงาน/สมาชิกทีมที่เช็กในเบราว์เซอร์
+      แต่ผู้ใช้ควรเจอป๊อปอัพราคาแบบเดียวกัน ไม่ใช่ข้อความเฉย ๆ */
+   function laSeatFull(e) {
+      if (e && (e.code === 'seat_full' || /ที่นั่งเต็ม/.test(e.message || ''))) {
+         if (typeof window.laShowQuota === 'function') { window.laShowQuota('seats'); return true; }
+      }
+      return false;
    }
 
    function laOpenUsers() {
@@ -1325,7 +1338,11 @@
                      เคยโคลนไว้ ผลคือขึ้นซ้ำสองกล่อง */
                   load();
                })
-               .catch(function (e) { bAdd.disabled = false; say(e.message, 'err'); });
+               .catch(function (e) {
+                  bAdd.disabled = false;
+                  laSeatFull(e);                // ที่นั่งเต็ม → เด้งป๊อปอัพราคาด้วย
+                  say(e.message, 'err');        // คงข้อความไว้ เผื่อผู้ใช้ปิดป๊อปอัพ
+               });
          };
          add.appendChild(iU); add.appendChild(iN); add.appendChild(iR); add.appendChild(bAdd);
          box.appendChild(add);
@@ -1340,7 +1357,7 @@
          clear();
          laUsersApi('/users/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body) })
             .then(function () { load(); })
-            .catch(function (e) { say(e.message, 'err'); });
+            .catch(function (e) { laSeatFull(e); say(e.message, 'err'); });
       }
       function load(after) {
          laUsersApi('/users').then(function (d) { draw(d); if (after) after(); })
