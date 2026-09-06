@@ -109,7 +109,7 @@ app.use((req, res, next) => {
   if (ORIGINS.includes('*')) res.set('Access-Control-Allow-Origin', '*');
   else if (origin && ORIGINS.includes(origin)) res.set('Access-Control-Allow-Origin', origin);
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
@@ -291,7 +291,7 @@ app.post('/users', auth, async (req, res) => {
     const { rows: [org] } = await client.query(
       'SELECT seat_limit FROM orgs WHERE id = $1 FOR UPDATE', [req.claims.org_id]);
     const { rows: [{ n }] } = await client.query(
-      'SELECT count(*)::int AS n FROM users WHERE org_id = $1', [req.claims.org_id]);
+      'SELECT count(*)::int AS n FROM users WHERE org_id = $1 AND active', [req.claims.org_id]);
 
     if (n >= org.seat_limit) {
       await client.query('ROLLBACK');
@@ -370,6 +370,105 @@ const code = String(req.query.code || '').toLowerCase();
 if (!/^[a-z0-9][a-z0-9-]{2,19}$/.test(code) || RESERVED.has(code)) return res.json({ available: false, reason: 'invalid' });
 try { const r = await pool.query('SELECT 1 FROM orgs WHERE lower(code) = $1', [code]); res.json({ available: r.rows.length === 0 }); }
 catch { res.json({ available: null }); }
+});
+
+/* ── GET /users — รายชื่อบัญชีในบริษัทตัวเอง ─────────────────
+   ตาราง users ถูกกันไม่ให้ PostgREST แตะ (กัน password_hash หลุด)
+   จึงต้องอ่านผ่านที่นี่ และไม่ส่ง hash ออกไปเด็ดขาด */
+app.get('/users', auth, async (req, res) => {
+  if (req.claims.user_role !== 'admin')
+    return res.status(403).json({ error: 'เฉพาะแอดมินเท่านั้น' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, username, display_name, role, active, last_login_at, created_at
+         FROM users WHERE org_id = $1 ORDER BY created_at`, [req.claims.org_id]);
+    const { rows: [org] } = await pool.query(
+      'SELECT seat_limit FROM orgs WHERE id = $1', [req.claims.org_id]);
+    res.json({
+      users: rows,
+      seat_limit: org?.seat_limit ?? 0,
+      seats_used: rows.filter(u => u.active).length,
+    });
+  } catch (e) {
+    console.error('list users error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
+/* ── PATCH /users/:id — เปิด/ปิดบัญชี หรือเปลี่ยนสิทธิ์ ───────
+   ปิดบัญชีคืนที่นั่งให้ ไม่ลบทิ้งเพราะงานเก่ายังอ้างชื่อคนนี้อยู่ */
+app.patch('/users/:id', auth, async (req, res) => {
+  if (req.claims.user_role !== 'admin')
+    return res.status(403).json({ error: 'เฉพาะแอดมินเท่านั้น' });
+  if (req.params.id === req.claims.user_id)
+    return res.status(400).json({ error: 'เปลี่ยนสิทธิ์หรือปิดบัญชีตัวเองไม่ได้' });
+
+  const { active, role } = req.body || {};
+  if (role !== undefined && !['admin', 'staff', 'viewer'].includes(role))
+    return res.status(400).json({ error: 'สิทธิ์ต้องเป็น admin, staff หรือ viewer' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [u] } = await client.query(
+      'SELECT id, active, role FROM users WHERE id = $1 AND org_id = $2 FOR UPDATE',
+      [req.params.id, req.claims.org_id]);
+    if (!u) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'ไม่พบผู้ใช้นี้' }); }
+
+    /* ห้ามเหลือบริษัทที่ไม่มีแอดมินใช้งานได้เลย */
+    const losingAdmin = u.role === 'admin' && (active === false || (role && role !== 'admin'));
+    if (losingAdmin) {
+      const { rows: [{ n }] } = await client.query(
+        `SELECT count(*)::int AS n FROM users
+          WHERE org_id = $1 AND role = 'admin' AND active AND id <> $2`,
+        [req.claims.org_id, u.id]);
+      if (n === 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'ต้องเหลือแอดมินที่ใช้งานได้อย่างน้อย 1 คน' });
+      }
+    }
+
+    /* เปิดบัญชีคืนต้องมีที่นั่งว่างพอ */
+    if (active === true && !u.active) {
+      const { rows: [org] } = await client.query(
+        'SELECT seat_limit FROM orgs WHERE id = $1 FOR UPDATE', [req.claims.org_id]);
+      const { rows: [{ n }] } = await client.query(
+        'SELECT count(*)::int AS n FROM users WHERE org_id = $1 AND active', [req.claims.org_id]);
+      if (n >= org.seat_limit) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: `ที่นั่งเต็มแล้ว (${org.seat_limit} คน) กรุณาอัปเกรดแพ็กเกจ` });
+      }
+    }
+
+    await client.query(
+      `UPDATE users SET active = COALESCE($1, active), role = COALESCE($2, role) WHERE id = $3`,
+      [active ?? null, role ?? null, u.id]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('patch user error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  } finally { client.release(); }
+});
+
+/* ── POST /users/:id/reset-password — ตั้งรหัสชั่วคราวใหม่ ────
+   คืนรหัสครั้งเดียว ระบบไม่เก็บไว้ให้ดูอีก */
+app.post('/users/:id/reset-password', auth, async (req, res) => {
+  if (req.claims.user_role !== 'admin')
+    return res.status(403).json({ error: 'เฉพาะแอดมินเท่านั้น' });
+  try {
+    const pw = crypto.randomBytes(9).toString('base64url');
+    const { rowCount } = await pool.query(
+      `UPDATE users SET password_hash = $1, must_change_password = true
+        WHERE id = $2 AND org_id = $3`,
+      [await bcrypt.hash(pw, 10), req.params.id, req.claims.org_id]);
+    if (!rowCount) return res.status(404).json({ error: 'ไม่พบผู้ใช้นี้' });
+    res.json({ ok: true, temp_password: pw });
+  } catch (e) {
+    console.error('reset password error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
 });
 
 // ════════════════════════════════════════════════════════════

@@ -1181,6 +1181,203 @@
       themeMo.observe(document.documentElement, { childList: true, subtree: true });
    }
 
+   // ===== 24.5 จัดการบัญชีผู้ใช้ =====
+   // "สมาชิกทีม" กับ "บัญชีผู้ใช้" คนละอย่าง — อันนั้นไว้มอบหมายงาน อันนี้ล็อกอินได้
+   // ปุ่มโผล่เฉพาะแอดมิน เพราะ endpoint ฝั่งเซิร์ฟเวอร์ก็กันไว้แบบเดียวกัน
+   var usrCss = document.createElement('style');
+   usrCss.id = 'la-usr-css';
+   usrCss.textContent = [
+      '.la-usr{display:inline-flex;align-items:center;margin-left:2px;background:transparent;border:0;',
+      'cursor:pointer;font-size:14px;line-height:1;padding:4px 6px;border-radius:8px}',
+      '.la-ubg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;',
+      'align-items:center;justify-content:center;padding:16px;overflow:auto}',
+      '.la-ubox{background:#fff;color:#0F1720;border-radius:20px;max-width:560px;width:100%;',
+      'padding:24px;box-shadow:0 24px 60px rgba(15,23,42,.3);max-height:92vh;overflow:auto}',
+      '.la-ubox.d{background:#151B2E;color:#E2E8F0}',
+      '.la-ubox h3{margin:0 0 2px;font-size:18px;font-weight:800}',
+      '.la-ubox .sub{margin:0 0 16px;font-size:12.5px;color:#64748B}',
+      '.la-ubox.d .sub{color:#94A3B8}',
+      '.la-urow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EEF1F8}',
+      '.la-ubox.d .la-urow{border-color:#2B3448}',
+      '.la-urow .nm{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}',
+      '.la-urow .nm span{display:block;font-size:11.5px;font-weight:400;color:#94A3B8}',
+      '.la-urow select{font-family:inherit;font-size:12.5px;padding:5px 8px;border-radius:8px;',
+      'border:1px solid #E2E8F0;background:#fff;color:#0F1720}',
+      '.la-ubox.d .la-urow select{background:#1B2338;border-color:#2B3448;color:#E2E8F0}',
+      '.la-urow button{font-family:inherit;font-size:12px;font-weight:600;border:0;border-radius:8px;',
+      'padding:6px 10px;cursor:pointer;background:#F1F3F9;color:#0F1720;white-space:nowrap}',
+      '.la-ubox.d .la-urow button{background:#1B2338;color:#E2E8F0}',
+      '.la-urow.off .nm{opacity:.45}',
+      '.la-uadd{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}',
+      '.la-uadd input{flex:1 1 130px;min-width:0;font-family:inherit;font-size:13px;padding:9px 11px;',
+      'border-radius:10px;border:1px solid #E2E8F0;background:#fff;color:#0F1720}',
+      '.la-ubox.d .la-uadd input{background:#1B2338;border-color:#2B3448;color:#E2E8F0}',
+      '.la-uadd button{font-family:inherit;font-size:13px;font-weight:700;border:0;border-radius:10px;',
+      'padding:9px 16px;cursor:pointer;background:#6D5AE6;color:#fff}',
+      '.la-umsg{margin-top:12px;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.6}',
+      '.la-umsg.ok{background:#DCF3EC;color:#0B7C61}',
+      '.la-umsg.err{background:#FBEADF;color:#B3480C}',
+      '.la-umsg code{font-family:ui-monospace,monospace;font-weight:700;font-size:14px}',
+      '.la-uclose{background:transparent;border:0;color:#64748B;font-size:13px;cursor:pointer;',
+      'padding:14px 6px 0;width:100%;font-family:inherit}',
+      '.la-useat{font-size:12.5px;color:#64748B;margin:0 0 4px}'
+      ].join('');
+   if (!document.getElementById('la-usr-css')) document.head.appendChild(usrCss);
+
+   var ROLE_TH = { admin: 'แอดมิน', staff: 'พนักงาน', viewer: 'ดูอย่างเดียว' };
+
+   function laUsersApi(path, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign(
+         { 'Authorization': 'Bearer ' + (window.laToken ? window.laToken() : ''), 'Content-Type': 'application/json' },
+         opts.headers || {});
+      return fetch((window.LA_CONFIG && window.LA_CONFIG.auth) + path, opts).then(function (r) {
+         return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok) throw new Error(d.error || ('ผิดพลาด ' + r.status));
+            return d;
+         });
+      });
+   }
+
+   function laOpenUsers() {
+      if (document.querySelector('.la-ubg')) return;
+      var me = (window.laUser && window.laUser()) || {};
+      var bg = document.createElement('div'); bg.className = 'la-ubg';
+      var box = document.createElement('div');
+      box.className = 'la-ubox' + (document.body.classList.contains('la-dark') ? ' d' : '');
+      bg.appendChild(box); document.body.appendChild(bg);
+      function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
+      bg.onclick = function (e) { if (e.target === bg) close(); };
+
+      var msg = document.createElement('div');
+      function say(t, kind) { msg.className = 'la-umsg ' + kind; msg.innerHTML = t; }
+      function clear() { msg.className = ''; msg.textContent = ''; }
+
+      function draw(d) {
+         box.innerHTML = '';
+         var h = document.createElement('h3'); h.textContent = 'จัดการบัญชีผู้ใช้';
+         var sub = document.createElement('p'); sub.className = 'sub';
+         sub.textContent = 'คนที่ล็อกอินเข้าระบบได้ — คนละส่วนกับสมาชิกทีมที่ไว้มอบหมายงาน';
+         var seat = document.createElement('p'); seat.className = 'la-useat';
+         seat.textContent = 'ใช้ไป ' + d.seats_used + ' จาก ' + d.seat_limit + ' ที่นั่ง';
+         box.appendChild(h); box.appendChild(sub); box.appendChild(seat);
+
+         d.users.forEach(function (u) {
+            var row = document.createElement('div');
+            row.className = 'la-urow' + (u.active ? '' : ' off');
+            var nm = document.createElement('div'); nm.className = 'nm';
+            nm.textContent = u.username + (u.id === me.id ? ' (คุณ)' : '');
+            var meta = document.createElement('span');
+            meta.textContent = (u.display_name ? u.display_name + ' · ' : '') +
+               (u.active ? 'ใช้งานอยู่' : 'ปิดอยู่') +
+               (u.last_login_at ? ' · เข้าล่าสุด ' + new Date(u.last_login_at).toLocaleDateString('th-TH') : ' · ยังไม่เคยเข้า');
+            nm.appendChild(meta); row.appendChild(nm);
+
+            var sel = document.createElement('select');
+            ['admin', 'staff', 'viewer'].forEach(function (r) {
+               var o = document.createElement('option'); o.value = r; o.textContent = ROLE_TH[r];
+               if (u.role === r) o.selected = true; sel.appendChild(o);
+            });
+            sel.disabled = u.id === me.id;
+            sel.onchange = function () { act(u.id, { role: sel.value }); };
+            row.appendChild(sel);
+
+            if (u.id !== me.id) {
+               var tog = document.createElement('button');
+               tog.textContent = u.active ? 'ปิดบัญชี' : 'เปิดบัญชี';
+               tog.onclick = function () { act(u.id, { active: !u.active }); };
+               row.appendChild(tog);
+               var rst = document.createElement('button');
+               rst.textContent = 'รีเซ็ตรหัส';
+               rst.onclick = function () {
+                  if (!confirm('ตั้งรหัสผ่านใหม่ให้ ' + u.username + '?')) return;
+                  laUsersApi('/users/' + encodeURIComponent(u.id) + '/reset-password', { method: 'POST' })
+                     .then(function (r) {
+                        say('รหัสผ่านใหม่ของ <b>' + u.username + '</b> คือ <code>' + r.temp_password +
+                            '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก', 'ok');
+                     })
+                     .catch(function (e) { say(e.message, 'err'); });
+               };
+               row.appendChild(rst);
+            }
+            box.appendChild(row);
+         });
+
+         var add = document.createElement('div'); add.className = 'la-uadd';
+         var iU = document.createElement('input'); iU.placeholder = 'ชื่อผู้ใช้ใหม่';
+         var iN = document.createElement('input'); iN.placeholder = 'ชื่อที่แสดง (ไม่บังคับ)';
+         var iR = document.createElement('select');
+         ['staff', 'admin', 'viewer'].forEach(function (r) {
+            var o = document.createElement('option'); o.value = r; o.textContent = ROLE_TH[r]; iR.appendChild(o);
+         });
+         iR.style.cssText = 'font-family:inherit;font-size:13px;padding:9px 11px;border-radius:10px;border:1px solid #E2E8F0';
+         var bAdd = document.createElement('button'); bAdd.textContent = '+ เพิ่ม';
+         bAdd.onclick = function () {
+            var un = iU.value.trim();
+            if (un.length < 3) { say('ชื่อผู้ใช้ต้องยาวอย่างน้อย 3 ตัว', 'err'); return; }
+            bAdd.disabled = true; clear();
+            laUsersApi('/users', { method: 'POST', body: JSON.stringify(
+               { username: un, display_name: iN.value.trim() || null, role: iR.value }) })
+               .then(function (r) {
+                  say('เพิ่ม <b>' + r.username + '</b> แล้ว รหัสผ่านชั่วคราวคือ <code>' + r.temp_password +
+                      '</code><br>คัดลอกไปให้เจ้าตัวเลย ระบบไม่แสดงซ้ำอีก และเขาต้องเปลี่ยนรหัสตอนเข้าครั้งแรก', 'ok');
+                  var keep = msg.cloneNode(true);
+                  load(function () { box.insertBefore(keep, box.querySelector('.la-uclose')); });
+               })
+               .catch(function (e) { bAdd.disabled = false; say(e.message, 'err'); });
+         };
+         add.appendChild(iU); add.appendChild(iN); add.appendChild(iR); add.appendChild(bAdd);
+         box.appendChild(add);
+         box.appendChild(msg);
+
+         var cl = document.createElement('button');
+         cl.className = 'la-uclose'; cl.type = 'button'; cl.textContent = 'ปิด';
+         cl.onclick = close; box.appendChild(cl);
+      }
+
+      function act(id, body) {
+         clear();
+         laUsersApi('/users/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body) })
+            .then(function () { load(); })
+            .catch(function (e) { say(e.message, 'err'); });
+      }
+      function load(after) {
+         laUsersApi('/users').then(function (d) { draw(d); if (after) after(); })
+            .catch(function (e) {
+               box.innerHTML = '';
+               var h = document.createElement('h3'); h.textContent = 'จัดการบัญชีผู้ใช้';
+               box.appendChild(h); say(e.message, 'err'); box.appendChild(msg);
+               var cl = document.createElement('button');
+               cl.className = 'la-uclose'; cl.textContent = 'ปิด'; cl.onclick = close; box.appendChild(cl);
+            });
+      }
+      box.textContent = 'กำลังโหลด…';
+      load();
+   }
+
+   function addUsersBtn() {
+      var me = (window.laUser && window.laUser()) || {};
+      if (me.role !== 'admin') return;              // เฉพาะแอดมิน
+      var box = document.querySelector('.la-lang');
+      if (!box || document.querySelector('.la-usr')) return;
+      var b = document.createElement('button');
+      b.className = 'la-usr'; b.type = 'button';
+      b.title = 'จัดการบัญชีผู้ใช้';
+      b.textContent = '👥';
+      b.onclick = laOpenUsers;
+      var anchor = document.querySelector('.la-theme') || box;
+      anchor.parentNode.insertBefore(b, anchor.nextSibling);
+   }
+   addUsersBtn();
+   setInterval(addUsersBtn, 900);
+   if (window.MutationObserver) {
+      var usrMo = new MutationObserver(function () {
+         addUsersBtn();
+         if (document.querySelector('.la-usr')) usrMo.disconnect();
+      });
+      usrMo.observe(document.documentElement, { childList: true, subtree: true });
+   }
+
    // ===== 25. Dark Mode ชุดสีจาก Reference =====
    // ชุดเดิมใช้สูตรคำนวณสี ผลออกมาหม่นเป็นสีน้ำตาลเขียว
    // ชุดนี้อ่านค่าสีจากภาพ Reference ที่ลูกค้าส่งมา แล้วจับคู่ทีละสี
