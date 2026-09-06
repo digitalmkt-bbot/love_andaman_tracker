@@ -41,6 +41,8 @@ const PLANS = {
   starter:  { price:  990, seats: 10, items: 1000, label: 'เริ่มต้น' },
   business: { price: 2590, seats: 20, items: 2000, label: 'ธุรกิจ'  },
 };
+/* ลำดับแพ็กเกจ ใช้กันอนุมัติออเดอร์เก่าแล้วลูกค้าโดนลดชั้น */
+const RANK = { demo: 0, trial: 0, starter: 1, business: 2, enterprise: 3 };
 
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   console.error('❌ PGRST_JWT_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร');
@@ -537,6 +539,19 @@ app.post('/admin/orders/:id/approve', adminOnly, async (req, res) => {
 
     const spec = PLANS[o.plan];
     if (!spec) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'ไม่รู้จักแพ็กเกจของออเดอร์นี้' }); }
+
+    /* กันเผลออนุมัติออเดอร์เก่าที่ต่ำกว่าแพ็กเกจปัจจุบัน ลูกค้าจะโดนลดชั้นทันที
+       ถ้าตั้งใจลดจริง ส่ง allow_downgrade: true มา */
+    const { rows: [cur] } = await client.query(
+      'SELECT plan FROM orgs WHERE id = $1 FOR UPDATE', [o.org_id]);
+    const now = RANK[cur?.plan] ?? 0, next = RANK[o.plan] ?? 0;
+    if (next < now && !req.body?.allow_downgrade) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: `ลูกค้าใช้แพ็กเกจ${PLANS[cur.plan]?.label || cur.plan}อยู่แล้ว การอนุมัติออเดอร์นี้จะลดชั้นลง — ถ้าตั้งใจ ให้ส่ง allow_downgrade`,
+        current_plan: cur.plan, order_plan: o.plan,
+      });
+    }
 
     await client.query(
       `UPDATE orders SET status='paid', slip_ref=$1, paid_at=now() WHERE id=$2`, [ref, o.id]);

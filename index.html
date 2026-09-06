@@ -176,6 +176,7 @@ button,a[role="button"]{min-height:40px}
       /* ลำดับแพ็กเกจ ใช้ตัดสินว่าจะโชว์การ์ดไหนบ้าง (โชว์เฉพาะที่สูงกว่าของปัจจุบัน) */
       rank: { demo: 0, trial: 0, starter: 1, business: 2, enterprise: 3 },
       planName: { demo: 'Demo', trial: 'Demo', starter: 'เริ่มต้น', business: 'ธุรกิจ', enterprise: 'องค์กร' },
+      planNameEn: { demo: 'Demo', trial: 'Demo', starter: 'Starter', business: 'Business', enterprise: 'Enterprise' },
       note: 'จ่ายครั้งเดียว ใช้ได้ตลอดไป · ไม่มีค่ารายเดือน ไม่มีการตัดบัตรอัตโนมัติ',
       /* ┌── ใส่ลิงก์สั่งซื้อของแต่ละแพ็กเกจที่ url ─────────────────────┐
          │  เว้นว่างไว้ = ปุ่มจะกดแล้วไม่เกิดอะไรขึ้น                   │
@@ -184,9 +185,11 @@ button,a[role="button"]{min-height:40px}
       plans: [
         {
           name: 'เริ่มต้น',
+          nameEn: 'Starter',
           key: 'starter',
           rank: 1,
           seats: 'ใช้ได้ไม่เกิน 10 คน',
+          seatsEn: 'Up to 10 people',
           was: '5,900',
           price: '990',
           url: '',
@@ -195,13 +198,21 @@ button,a[role="button"]{min-height:40px}
             'ผู้ใช้ได้ถึง 10 คน',
             'Task 1,000',
             'ใช้งานได้ทันทีหลังยืนยันการชำระเงิน'
+          ],
+          featsEn: [
+            'Work board and duty roster',
+            'Up to 10 users',
+            '1,000 tasks',
+            'Active as soon as payment is confirmed'
           ]
         },
         {
           name: 'ธุรกิจ',
+          nameEn: 'Business',
           key: 'business',
           rank: 2,
           seats: 'ใช้ได้ไม่เกิน 20 คน',
+          seatsEn: 'Up to 20 people',
           was: '9,900',
           price: '2,590',
           best: true,
@@ -215,12 +226,24 @@ button,a[role="button"]{min-height:40px}
             'รายงานสรุปรายเดือน',
             'ใส่โลโก้และสีของบริษัทคุณ',
             'ช่วยย้ายข้อมูลเดิมจาก Excel'
+          ],
+          featsEn: [
+            'Everything in Starter',
+            'Role-based permissions',
+            'Up to 20 users',
+            '2,000 tasks',
+            'Recurring tasks',
+            'Monthly summary reports',
+            'Your own logo and colours',
+            'We migrate your Excel data'
           ]
         },
         {
           name: 'องค์กร',
+          nameEn: 'Enterprise',
           rank: 3,
           seats: 'มากกว่า 20 คน หรือหลายสาขา',
+          seatsEn: 'Over 20 people, or multiple branches',
           priceText: 'ประเมินงาน',
           sub: 'ตามขอบเขตที่ตกลง',
           cta: 'ขอใบเสนอราคา',
@@ -231,6 +254,13 @@ button,a[role="button"]{min-height:40px}
             'เชื่อมต่อระบบเดิมที่คุณใช้อยู่',
             'ปรับฟีเจอร์เพิ่มตามที่ต้องการ',
             'อบรมทีมแบบ on-site'
+          ],
+          featsEn: [
+            'Everything in Business',
+            'Data separated by branch',
+            'Connects to the systems you already use',
+            'Custom features on request',
+            'On-site team training'
           ]
         }
       ]
@@ -244,6 +274,45 @@ button,a[role="button"]{min-height:40px}
       if (typeof org.seat_limit === 'number' && org.seat_limit > 0) LA_DEMO.maxTeam = org.seat_limit;
       if (org.plan) LA_DEMO.plan = org.plan;
     }
+
+    /* สองหน้าจอนี้เขียนด้วย DOM ล้วน ตัวดักแปลที่ครอบ React.createElement จึงไม่จับ
+       เลยต้องมีพจนานุกรมของตัวเอง อ่านภาษาจากที่เดียวกับปุ่ม TH / EN */
+    function laLang() { try { return localStorage.getItem('la_lang') || 'th'; } catch (e) { return 'th'; } }
+    var LA_EN = {
+      'ใส่งานได้ครบ': 'You have used all',
+      'เพิ่มสมาชิกทีมได้ครบ': 'You have used all',
+      'จ่ายครั้งเดียว': 'One-time payment',
+      'จ่ายครั้งเดียว ใช้ได้ตลอดไป · ไม่มีค่ารายเดือน ไม่มีการตัดบัตรอัตโนมัติ':
+        'Pay once, keep it forever · No monthly fee, no automatic card charges',
+      'เลือกแพ็กเกจนี้': 'Choose this plan',
+      'ขอใบเสนอราคา': 'Request a quote',
+      'ไว้ก่อน': 'Not now',
+      'แนะนำ': 'Popular',
+      'ประเมินงาน': 'Custom quote',
+      'ตามขอบเขตที่ตกลง': 'Based on agreed scope',
+      'คุณใช้แพ็กเกจสูงสุดอยู่แล้ว ติดต่อทีมงานเพื่อขยายเพดานเพิ่ม':
+        'You are on the highest plan. Contact us to raise your limits.',
+      'สแกนจ่ายด้วยพร้อมเพย์': 'Scan to pay with PromptPay',
+      'โอนให้ตรงยอดนี้ รวมเศษสตางค์ ระบบใช้จับคู่รายการ':
+        'Transfer this exact amount, satang included — we match payments by it',
+      'ชื่อผู้โอน': 'Name on the transfer',
+      'ชื่อที่ขึ้นในสลิป': 'The name shown on your slip',
+      'เบอร์โทรหรืออีเมล': 'Phone or email',
+      'ไว้ติดต่อกลับถ้าสลิปมีปัญหา': 'So we can reach you if the slip needs checking',
+      'โอนแล้ว — แนบสลิป': 'Paid — attach slip',
+      'ลองแนบสลิปอีกครั้ง': 'Try attaching the slip again',
+      'กำลังส่ง…': 'Sending…',
+      'กรุณากรอกชื่อผู้โอน': 'Please enter the name on the transfer',
+      'กรุณากรอกเบอร์โทรหรืออีเมลให้ถูกต้อง': 'Please enter a valid phone number or email',
+      'กำลังสร้างคำสั่งซื้อ…': 'Creating your order…',
+      'สั่งซื้อไม่สำเร็จ': 'Could not create the order',
+      'ปิด': 'Close',
+      'ส่งสลิปแล้ว': 'Slip received',
+      'ทีมงานกำลังตรวจสอบ เมื่ออนุมัติแล้วเพดานจะขยายให้เองภายใน 15 วินาที ไม่ต้องออกจากระบบ':
+        'We are checking it now. Once approved your limits lift within 15 seconds — no need to sign out.',
+      'เข้าใจแล้ว': 'Got it'
+    };
+    function L(th) { return laLang() === 'en' ? (LA_EN[th] || th) : th; }
 
     /* นับของที่มีอยู่ทุกครั้งที่ดึงข้อมูลจากเซิร์ฟเวอร์ */
     var _laKnown = {}, _laItems = 0, _laTeam = 0;
@@ -307,12 +376,18 @@ button,a[role="button"]{min-height:40px}
     function laShowQuota(kind) {
       if (document.querySelector('.la-quota-bg')) return;
       laQuotaCss();
-      var pname = LA_DEMO.planName[LA_DEMO.plan] || LA_DEMO.plan;
+      var pname = (laLang() === 'en' ? LA_DEMO.planNameEn : LA_DEMO.planName)[LA_DEMO.plan] || LA_DEMO.plan;
       var head = kind === 'team'
-        ? ['เพิ่มสมาชิกทีมได้ครบ ' + LA_DEMO.maxTeam + ' คนแล้ว',
-           'แพ็กเกจ' + pname + ' เพิ่มได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) อัปเกรดเพื่อเพิ่มทีมได้มากขึ้น']
-        : ['ใส่งานได้ครบ ' + LA_DEMO.maxItems + ' รายการแล้ว',
-           'แพ็กเกจ' + pname + ' ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้มากขึ้น'];
+        ? (laLang() === 'en'
+            ? ['All ' + LA_DEMO.maxTeam + ' team seats are used',
+               'The ' + pname + ' plan includes ' + LA_DEMO.maxTeam + ' people (you included). Upgrade to add more.']
+            : ['เพิ่มสมาชิกทีมได้ครบ ' + LA_DEMO.maxTeam + ' คนแล้ว',
+               'แพ็กเกจ' + pname + ' เพิ่มได้ ' + LA_DEMO.maxTeam + ' คน (รวมตัวเอง) อัปเกรดเพื่อเพิ่มทีมได้มากขึ้น'])
+        : (laLang() === 'en'
+            ? ['All ' + LA_DEMO.maxItems + ' items are used',
+               'The ' + pname + ' plan holds ' + LA_DEMO.maxItems + ' items across every section. Delete older ones, or upgrade for more.']
+            : ['ใส่งานได้ครบ ' + LA_DEMO.maxItems + ' รายการแล้ว',
+               'แพ็กเกจ' + pname + ' ใส่งานได้รวมทุกหัวข้อ ' + LA_DEMO.maxItems + ' รายการ ลบงานเก่าออกก่อน หรืออัปเกรดเพื่อใส่ได้มากขึ้น']);
       /* โชว์เฉพาะแพ็กเกจที่สูงกว่าของปัจจุบัน อยู่ธุรกิจแล้วไม่ต้องเห็นเริ่มต้นอีก */
       var myRank = LA_DEMO.rank[LA_DEMO.plan];
       if (typeof myRank !== 'number') myRank = 0;
@@ -325,7 +400,7 @@ button,a[role="button"]{min-height:40px}
 
       var h = document.createElement('h3'); h.textContent = head[0];
       var lead = document.createElement('p'); lead.className = 'lead'; lead.textContent = head[1];
-      var note = document.createElement('p'); note.className = 'note'; note.textContent = LA_DEMO.note || '';
+      var note = document.createElement('p'); note.className = 'note'; note.textContent = L(LA_DEMO.note || '');
       box.appendChild(h); box.appendChild(lead); if (LA_DEMO.note) box.appendChild(note);
 
       function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
@@ -333,19 +408,24 @@ button,a[role="button"]{min-height:40px}
       offer.forEach(function (pl) {
         var c = document.createElement('div');
         c.className = 'la-qc' + (pl.best ? ' best' : '');
-        if (pl.best) { var tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = 'แนะนำ'; c.appendChild(tg); }
-        var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = pl.name;
-        var stt = document.createElement('div'); stt.className = 'st'; stt.textContent = pl.seats;
+        if (pl.best) { var tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = L('แนะนำ'); c.appendChild(tg); }
+        var en = laLang() === 'en';
+        var nm = document.createElement('div'); nm.className = 'nm';
+        nm.textContent = (en && pl.nameEn) || pl.name;
+        var stt = document.createElement('div'); stt.className = 'st';
+        stt.textContent = (en && pl.seatsEn) || pl.seats;
         c.appendChild(nm); c.appendChild(stt);
-        if (pl.was) { var w = document.createElement('div'); w.className = 'was'; w.textContent = 'ปกติ ' + pl.was + ' ฿'; c.appendChild(w); }
+        if (pl.was) { var w = document.createElement('div'); w.className = 'was'; w.textContent = (laLang() === 'en' ? 'Normally ' : 'ปกติ ') + pl.was + ' ฿'; c.appendChild(w); }
         /* แพ็กเกจองค์กรไม่มีราคาตายตัว จึงใส่ priceText / sub มาแทนได้ */
         var pz = document.createElement('div'); pz.className = 'pz';
-        pz.textContent = pl.priceText || (pl.price + ' ฿');
+        pz.textContent = pl.priceText ? L(pl.priceText) : (pl.price + ' ฿');
         var one = document.createElement('div'); one.className = 'one';
-        one.textContent = pl.sub || 'จ่ายครั้งเดียว';
+        one.textContent = L(pl.sub || 'จ่ายครั้งเดียว');
         c.appendChild(pz); c.appendChild(one);
         var ul = document.createElement('ul');
-        (pl.feats || []).forEach(function (f) { var li = document.createElement('li'); li.textContent = f; ul.appendChild(li); });
+        ((en && pl.featsEn) || pl.feats || []).forEach(function (f) {
+          var li = document.createElement('li'); li.textContent = f; ul.appendChild(li);
+        });
         c.appendChild(ul);
         var go;
         if (pl.key) {
@@ -354,7 +434,7 @@ button,a[role="button"]{min-height:40px}
         } else if (pl.url) {
           go = document.createElement('a'); go.href = pl.url; go.target = '_blank'; go.rel = 'noopener';
         } else { go = document.createElement('button'); go.type = 'button'; }
-        go.className = 'go'; go.textContent = pl.cta || 'เลือกแพ็กเกจนี้';
+        go.className = 'go'; go.textContent = L(pl.cta || 'เลือกแพ็กเกจนี้');
         c.appendChild(go);
         wrap.appendChild(c);
       });
@@ -362,12 +442,12 @@ button,a[role="button"]{min-height:40px}
       else {
         var top = document.createElement('p');
         top.className = 'lead';
-        top.textContent = 'คุณใช้แพ็กเกจสูงสุดอยู่แล้ว ติดต่อทีมงานเพื่อขยายเพดานเพิ่ม';
+        top.textContent = L('คุณใช้แพ็กเกจสูงสุดอยู่แล้ว ติดต่อทีมงานเพื่อขยายเพดานเพิ่ม');
         box.appendChild(top);
       }
 
       var no = document.createElement('button');
-      no.className = 'no'; no.type = 'button'; no.textContent = 'ไว้ก่อน';
+      no.className = 'no'; no.type = 'button'; no.textContent = L('ไว้ก่อน');
       no.onclick = close;
       bg.onclick = function (ev) { if (ev.target === bg) close(); };
       box.appendChild(no);
@@ -471,29 +551,29 @@ button,a[role="button"]{min-height:40px}
       function close() { if (bg.parentNode) bg.parentNode.removeChild(bg); }
       bg.onclick = function (ev) { if (ev.target === bg) close(); };
 
-      box.innerHTML = '<h3>กำลังสร้างคำสั่งซื้อ…</h3>';
+      box.innerHTML = ''; box.appendChild(Object.assign(document.createElement('h3'), { textContent: L('กำลังสร้างคำสั่งซื้อ…') }));
       laAuthFetch('/orders', { method: 'POST', body: JSON.stringify({ plan: plan }) })
         .then(function (o) { paint(o); })
         .catch(function (e) {
           box.innerHTML = '';
-          var h = document.createElement('h3'); h.textContent = 'สั่งซื้อไม่สำเร็จ';
+          var h = document.createElement('h3'); h.textContent = L('สั่งซื้อไม่สำเร็จ');
           var p = document.createElement('p'); p.className = 'err'; p.textContent = e.message;
-          var b = document.createElement('button'); b.className = 'btn wait'; b.textContent = 'ปิด'; b.onclick = close;
+          var b = document.createElement('button'); b.className = 'btn wait'; b.textContent = L('ปิด'); b.onclick = close;
           box.appendChild(h); box.appendChild(p); box.appendChild(b);
         });
 
       function paint(o) {
         box.innerHTML = '';
-        var h = document.createElement('h3'); h.textContent = 'สแกนจ่ายด้วยพร้อมเพย์';
+        var h = document.createElement('h3'); h.textContent = L('สแกนจ่ายด้วยพร้อมเพย์');
         var p = document.createElement('p'); p.className = 'p';
-        p.textContent = 'แพ็กเกจ' + o.plan_label + ' · จ่ายครั้งเดียว ใช้ได้ตลอดไป';
+        p.textContent = laLang() === 'en' ? (o.plan_label + ' plan · pay once, keep it forever') : ('แพ็กเกจ' + o.plan_label + ' · จ่ายครั้งเดียว ใช้ได้ตลอดไป');
         var qr = document.createElement('div'); qr.className = 'qr';
         var amt = document.createElement('div'); amt.className = 'amt';
         amt.textContent = Number(o.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' ฿';
         var ex = document.createElement('p'); ex.className = 'exact';
-        ex.textContent = 'โอนให้ตรงยอดนี้ รวมเศษสตางค์ ระบบใช้จับคู่รายการ';
+        ex.textContent = L('โอนให้ตรงยอดนี้ รวมเศษสตางค์ ระบบใช้จับคู่รายการ');
         var ac = document.createElement('p'); ac.className = 'acct';
-        ac.textContent = 'พร้อมเพย์ ' + o.promptpay + ' · เลขที่ ' + o.id;
+        ac.textContent = (laLang() === 'en' ? 'PromptPay ' : 'พร้อมเพย์ ') + o.promptpay + (laLang() === 'en' ? ' · Order ' : ' · เลขที่ ') + o.id;
         box.appendChild(h); box.appendChild(p); box.appendChild(qr);
         box.appendChild(amt); box.appendChild(ex); box.appendChild(ac);
         laDrawQR(qr, o.qr);
@@ -506,20 +586,20 @@ button,a[role="button"]{min-height:40px}
           w.appendChild(l); w.appendChild(i); box.appendChild(w);
           return i;
         }
-        var fName = field('la-payer', 'ชื่อผู้โอน', 'ชื่อที่ขึ้นในสลิป');
-        var fCon  = field('la-contact', 'เบอร์โทรหรืออีเมล', 'ไว้ติดต่อกลับถ้าสลิปมีปัญหา', 'tel');
+        var fName = field('la-payer', L('ชื่อผู้โอน'), L('ชื่อที่ขึ้นในสลิป'));
+        var fCon  = field('la-contact', L('เบอร์โทรหรืออีเมล'), L('ไว้ติดต่อกลับถ้าสลิปมีปัญหา'), 'tel');
 
         var err = document.createElement('p'); err.className = 'err';
-        var pick = document.createElement('button'); pick.className = 'btn'; pick.textContent = 'โอนแล้ว — แนบสลิป';
-        var later = document.createElement('button'); later.className = 'btn wait'; later.textContent = 'ไว้ก่อน';
+        var pick = document.createElement('button'); pick.className = 'btn'; pick.textContent = L('โอนแล้ว — แนบสลิป');
+        var later = document.createElement('button'); later.className = 'btn wait'; later.textContent = L('ไว้ก่อน');
         later.onclick = close;
         box.appendChild(err); box.appendChild(pick); box.appendChild(later);
 
         pick.onclick = function () {
           var nm = fName.value.trim(), ct = fCon.value.trim();
-          if (nm.length < 2) { err.textContent = 'กรุณากรอกชื่อผู้โอน'; fName.focus(); return; }
+          if (nm.length < 2) { err.textContent = L('กรุณากรอกชื่อผู้โอน'); fName.focus(); return; }
           if (!/^[0-9+\-() ]{8,}$/.test(ct) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ct)) {
-            err.textContent = 'กรุณากรอกเบอร์โทรหรืออีเมลให้ถูกต้อง'; fCon.focus(); return;
+            err.textContent = L('กรุณากรอกเบอร์โทรหรืออีเมลให้ถูกต้อง'); fCon.focus(); return;
           }
           err.textContent = '';
           var inp = document.createElement('input');
@@ -527,7 +607,7 @@ button,a[role="button"]{min-height:40px}
           inp.onchange = function () {
             var f = inp.files && inp.files[0];
             if (!f) return;
-            err.textContent = ''; pick.disabled = true; pick.textContent = 'กำลังส่ง…';
+            err.textContent = ''; pick.disabled = true; pick.textContent = L('กำลังส่ง…');
             laShrinkSlip(f)
               .then(function (url) {
                 return laAuthFetch('/orders/' + encodeURIComponent(o.id) + '/slip',
@@ -536,15 +616,15 @@ button,a[role="button"]{min-height:40px}
               })
               .then(function () {
                 box.innerHTML = '';
-                var d = document.createElement('p'); d.className = 'done'; d.textContent = 'ส่งสลิปแล้ว';
+                var d = document.createElement('p'); d.className = 'done'; d.textContent = L('ส่งสลิปแล้ว');
                 var t = document.createElement('p'); t.className = 'p';
-                t.textContent = 'ทีมงานกำลังตรวจสอบ เมื่ออนุมัติแล้วเพดานจะขยายให้เองภายใน 15 วินาที ไม่ต้องออกจากระบบ';
-                var c = document.createElement('button'); c.className = 'btn'; c.textContent = 'เข้าใจแล้ว'; c.onclick = close;
+                t.textContent = L('ทีมงานกำลังตรวจสอบ เมื่ออนุมัติแล้วเพดานจะขยายให้เองภายใน 15 วินาที ไม่ต้องออกจากระบบ');
+                var c = document.createElement('button'); c.className = 'btn'; c.textContent = L('เข้าใจแล้ว'); c.onclick = close;
                 box.appendChild(d); box.appendChild(t); box.appendChild(c);
               })
               .catch(function (e) {
                 err.textContent = e.message;
-                pick.disabled = false; pick.textContent = 'ลองแนบสลิปอีกครั้ง';
+                pick.disabled = false; pick.textContent = L('ลองแนบสลิปอีกครั้ง');
               });
           };
           inp.click();
