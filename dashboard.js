@@ -1271,11 +1271,30 @@
          opts.headers || {});
       return fetch(window.LA_CONFIG.api + path, opts);
    }
-   function laTeamAdd(name) {
+   /* สีประจำตัว คิดจากชื่อ จะได้คงที่และไม่ต้องจำว่าใครได้สีไหน
+      ต้องใส่ตั้งแต่ตอนสร้าง ถ้าปล่อย null วงกลมในหน้างานจะกลายเป็นวงขาว */
+   function laColorFor(name) {
+      var pal = window.TEAM_COLOR_PALETTE || TEAM_COLORS_16;
+      var h = 0;
+      for (var i = 0; i < String(name).length; i++) h = (h * 31 + String(name).charCodeAt(i)) >>> 0;
+      return pal[h % pal.length];
+   }
+   function laTeamAdd(name, color) {
       return laTeamApi('/team_members?on_conflict=org_id,name', {
          method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-         body: JSON.stringify([{ name: name, color: null }])
+         body: JSON.stringify([{ name: name, color: color || laColorFor(name) }])
       });
+   }
+   /* เติมสีให้คนที่ค้างเป็น null อยู่ (เกิดจากรุ่นก่อนหน้าที่สร้างโดยไม่ใส่สี) */
+   function laFixNullColors(team) {
+      var bad = (team || []).filter(function (t) { return !t.color; });
+      if (!bad.length) return Promise.resolve(false);
+      return Promise.all(bad.map(function (t) {
+         return laTeamApi('/team_members?name=eq.' + encodeURIComponent(t.name), {
+            method: 'PATCH', headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ color: laColorFor(t.name) })
+         });
+      })).then(function () { return true; });
    }
    function laTeamDel(name) {
       return laTeamApi('/team_members?name=eq.' + encodeURIComponent(name),
@@ -1315,12 +1334,9 @@
 
       /* สีประจำตัวเอาจากจานเดียวกับที่แอปใช้ จะได้ตรงกับวงกลมในหน้างาน */
       function laDot(name, color, onPick) {
-         var pal = window.TEAM_COLOR_PALETTE || TEAM_COLORS_16;
-         var h = 0;
-         for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
          var d = document.createElement('span');
          d.className = 'la-udot';
-         d.style.background = color || pal[h % pal.length];
+         d.style.background = color || laColorFor(name);
          var src = window.__laAvatars && window.__laAvatars[name];
          if (src) { d.style.backgroundImage = 'url(' + src + ')'; d.textContent = ''; }
          else d.textContent = (name || '?').trim().charAt(0);
@@ -1520,6 +1536,13 @@
             laUsersApi('/users'),
             laTeamApi('/team_members?select=name,color&order=id').then(function (r) { return r.json(); })
          ]).then(function (res) {
+            return laFixNullColors(res[1]).then(function (fixed) {
+               if (!fixed) return res;
+               return laTeamApi('/team_members?select=name,color&order=id')
+                  .then(function (r) { return r.json(); })
+                  .then(function (t2) { return [res[0], t2]; });
+            });
+         }).then(function (res) {
             var d = res[0], team = laMergePeople(d.users, res[1] || []);
             colorOf = {}; (res[1] || []).forEach(function (t) { colorOf[(t.name || '').trim()] = t.color; });
             /* คนที่ใช้งานอยู่ต้องมีชื่อในทีมเสมอ ไม่งั้นมอบหมายงานให้ไม่ได้ */
@@ -1572,6 +1595,20 @@
       });
       usrMo.observe(document.documentElement, { childList: true, subtree: true });
    }
+
+   /* ซ่อมสีที่ค้างเป็น null ตอนเปิดแอป ไม่ต้องรอให้เปิดกล่องจัดการทีมก่อน
+      เขียนเฉพาะตอนที่มีของค้างจริง ปกติจะไม่ยิงอะไรเลย */
+   function laHealColors() {
+      if (!window.laToken || !window.laToken() || !window.LA_CONFIG) return;
+      laTeamApi('/team_members?select=name,color')
+         .then(function (r) { return r.json(); })
+         .then(function (t) { return laFixNullColors(t); })
+         .then(function (fixed) {
+            if (fixed && window.fb && window.fb._refresh) window.fb._refresh();
+         })
+         .catch(function () {});
+   }
+   setTimeout(laHealColors, 2500);
 
    /* ===== เปลี่ยนรหัสผ่าน =====
       เดิมไม่มีหน้านี้เลย พนักงานที่ได้รหัสชั่วคราวจึงเปลี่ยนเองไม่ได้
