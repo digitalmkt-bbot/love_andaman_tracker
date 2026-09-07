@@ -646,6 +646,26 @@ function adminOnly(req, res, next) {
 /* ── เครื่องมือกู้บัญชีของทีมงาน ─────────────────────────────
    แอดมินของบริษัทลืมรหัสแล้วไม่มีใครรีเซ็ตให้ได้ เพราะการรีเซ็ตต้องใช้แอดมิน
    ทางเดียวคือทีมงานผู้ให้บริการรีเซ็ตให้ ผ่าน ADMIN_KEY */
+/* รายชื่อบริษัททั้งหมด พร้อมจำนวนข้อมูลข้างใน
+   ไม่มีทางอื่นที่จะรู้ว่ามีบริษัทอะไรอยู่บ้าง นอกจากไปดูที่ฐานข้อมูลตรง ๆ
+   ซึ่งต่อจากข้างนอกไม่ได้ */
+app.get('/admin/orgs', adminOnly, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.code, o.name, o.plan, o.seat_limit, o.item_limit, o.status, o.created_at,
+              (SELECT count(*)::int FROM users u WHERE u.org_id = o.id AND u.active) AS users,
+              (SELECT count(*)::int FROM tasks t WHERE t.org_id = o.id AND NOT t.deleted) AS tasks,
+              (SELECT count(*)::int FROM posts p WHERE p.org_id = o.id AND NOT p.deleted) AS posts,
+              (SELECT count(*)::int FROM jobs j WHERE j.org_id = o.id AND NOT j.deleted) AS jobs,
+              (SELECT max(u.last_login_at) FROM users u WHERE u.org_id = o.id) AS last_login
+         FROM orgs o ORDER BY o.created_at`);
+    res.json({ count: rows.length, orgs: rows });
+  } catch (e) {
+    console.error('admin list orgs error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
 app.get('/admin/users', adminOnly, async (req, res) => {
   const code = String(req.query.org || '').toLowerCase();
   if (!code) return res.status(400).json({ error: 'ต้องระบุรหัสบริษัท (?org=)' });
