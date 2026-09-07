@@ -643,6 +643,49 @@ function adminOnly(req, res, next) {
   next();
 }
 
+/* ── เครื่องมือกู้บัญชีของทีมงาน ─────────────────────────────
+   แอดมินของบริษัทลืมรหัสแล้วไม่มีใครรีเซ็ตให้ได้ เพราะการรีเซ็ตต้องใช้แอดมิน
+   ทางเดียวคือทีมงานผู้ให้บริการรีเซ็ตให้ ผ่าน ADMIN_KEY */
+app.get('/admin/users', adminOnly, async (req, res) => {
+  const code = String(req.query.org || '').toLowerCase();
+  if (!code) return res.status(400).json({ error: 'ต้องระบุรหัสบริษัท (?org=)' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.username, u.display_name, u.role, u.active,
+              u.must_change_password, u.last_login_at, u.created_at,
+              o.code AS org_code, o.name AS org_name
+         FROM users u JOIN orgs o ON o.id = u.org_id
+        WHERE lower(o.code) = $1 ORDER BY u.created_at`, [code]);
+    res.json({ org: code, count: rows.length, users: rows });
+  } catch (e) {
+    console.error('admin list users error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
+/* ตั้งรหัสชั่วคราวใหม่ให้ผู้ใช้คนใดก็ได้ และปลดล็อกบัญชีให้ด้วย
+   คืนรหัสครั้งเดียว ระบบไม่เก็บไว้ให้ดูซ้ำ */
+app.post('/admin/users/reset', adminOnly, async (req, res) => {
+  const code = String(req.body?.org || '').toLowerCase();
+  const username = String(req.body?.username || '').trim();
+  if (!code || !username) return res.status(400).json({ error: 'ต้องระบุ org และ username' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id FROM users u JOIN orgs o ON o.id = u.org_id
+        WHERE lower(o.code) = $1 AND lower(u.username) = lower($2)`, [code, username]);
+    if (!rows.length) return res.status(404).json({ error: 'ไม่พบผู้ใช้นี้ในบริษัทนี้' });
+
+    const pw = crypto.randomBytes(9).toString('base64url');
+    await pool.query(
+      `UPDATE users SET password_hash = $1, must_change_password = false, active = true
+        WHERE id = $2`, [await bcrypt.hash(pw, 10), rows[0].id]);
+    res.json({ ok: true, username, temp_password: pw });
+  } catch (e) {
+    console.error('admin reset error:', e.message);
+    res.status(500).json({ error: 'ระบบขัดข้อง' });
+  }
+});
+
 app.get('/admin/orders', adminOnly, async (req, res) => {
   const only = String(req.query.status || 'checking');
   try {
