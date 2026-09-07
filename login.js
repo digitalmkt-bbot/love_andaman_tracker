@@ -93,6 +93,9 @@ else { wireLogin(box); box.querySelector('#la-user').focus(); }
 }
 render();
    document.body.appendChild(box);
+   /* index.html ซ่อน body ไว้รอ dashboard.js ตกแต่งเสร็จ
+      แต่หน้าล็อกอินไม่ต้องรออะไร ถ้าไม่เปิดตรงนี้ ผู้ใช้จะเจอจอว่างก่อน 2.5 วินาที */
+   if (window.__laReveal) window.__laReveal();
 
   function wireLogin(box) {
   var btn = box.querySelector('#la-go');

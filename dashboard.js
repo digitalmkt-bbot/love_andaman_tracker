@@ -847,9 +847,19 @@
       var repaintTries = 0, repaintCalls = 0;
       var repaintTimer = setInterval(function () {
          repaintTries++;
-         if (repaintApplied()) { clearInterval(repaintTimer); return; }
+         if (repaintApplied()) {
+            clearInterval(repaintTimer);
+            /* ของที่เขียนทับขึ้นแล้ว เปิดหน้าให้เห็นได้ ไม่ต้องรอเวลาสำรอง
+               ผู้ใช้จึงไม่เห็นหน้าตาดั้งเดิมแวบก่อน */
+            if (window.__laReveal) window.__laReveal();
+            return;
+         }
          /* หน้าที่ยืนยันไม่ได้ (เลือก EN แล้วอยู่หน้าอื่น) สั่งสัก 5 ครั้งก็พอ */
-         if (repaintCalls >= 5 || repaintTries > 40) { clearInterval(repaintTimer); return; }
+         if (repaintCalls >= 5 || repaintTries > 40) {
+            clearInterval(repaintTimer);
+            if (window.__laReveal) window.__laReveal();   // ยอมแพ้แล้วก็ต้องเปิดหน้า
+            return;
+         }
          if (document.querySelector('#la-login')) return;
          if (forceRepaint()) repaintCalls++;
       }, 500);

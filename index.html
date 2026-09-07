@@ -15,8 +15,10 @@
     <!-- ซ่อนหน้าไว้จนกว่า dashboard.js จะแปลภาษาเสร็จ -->
     <!-- เดิมแอปวาดหน้าเป็นไทยก่อน แล้วค่อยสลับเป็นอังกฤษ จึงเห็นเด้ง -->
     <!-- ถ้า dashboard.js พัง ตัวจับเวลาจะเปิดหน้าให้เองใน 3 วินาที -->
-            <!-- ถอดการซ่อนหน้าออกแล้ว — แอปวาดหน้าที่ถูกตั้งแต่เฟรมแรก จึงไม่ต้องรอ -->
-        <style id="la-boot-hide"></style>
+    <!-- เปิดการซ่อนกลับ: dashboard.js ทำงานหลังแอปวาดเสร็จ ถ้าไม่ซ่อน
+         ผู้ใช้จะเห็นหน้าตาดั้งเดิม (เมนูข้าง ภาษาอังกฤษ) แวบหนึ่งทุกครั้งที่โหลด
+         เปิดหน้าเมื่อของที่เขียนทับขึ้นจริง หรือครบเวลาสำรอง แล้วแต่อะไรถึงก่อน -->
+        <style id="la-boot-hide">body{opacity:0}</style>
     <script>
       (function(){
         var dark=false; try{dark=localStorage.getItem('la_dark')==='1';}catch(e){}
@@ -39,7 +41,8 @@
           if(d){ d.style.opacity='0'; setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); },320); }
             setTimeout(function(){ var s=document.getElementById('la-boot-hide'); if(s&&s.parentNode) s.parentNode.removeChild(s); },400);
         };
-        setTimeout(function(){ window.__laReveal(); },3500);
+        // กันหน้าขาวค้าง: ถึงเวลานี้เปิดให้เสมอ ไม่ว่าอะไรจะเกิดขึ้น
+        setTimeout(function(){ window.__laReveal(); },2500);
       })();
     </script>
     <!-- ตัด Tailwind CDN ออก (398 KB + คอมไพล์ในเบราว์เซอร์ทุกครั้ง) — ใช้ styles.css 21 KB แทน -->
