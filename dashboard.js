@@ -2410,9 +2410,6 @@
          if (VIEW_SLUGS[vi][0] === s) want = VIEW_SLUGS[vi][1];
       }
       if (!want) return;
-      var lang = 'th';
-      try { lang = localStorage.getItem('la_lang') || 'th'; } catch (err) {}
-      var wantTitle = lang === 'en' ? want[0] : want[1];
       var cur = null;
       var h2s = document.querySelectorAll('h2');
       for (var i = 0; i < h2s.length; i++) {
@@ -2420,7 +2417,16 @@
          cur = (h2s[i].textContent || '').trim();
          break;
       }
-            if (cur === wantTitle) { window.__laViewReady = true; return; }
+      /* ยอมรับทั้งชื่อไทยและอังกฤษ
+         เดิมเทียบกับภาษาที่เลือกอย่างเดียว ถ้าตัวแปลยังไม่ทำงาน หน้าจะขึ้น "Tracking"
+         แต่ตัวนี้คาดหวัง "ติดตามงาน" จึงคิดว่าอยู่ผิดหน้า แล้วกดปุ่มเมนูซ้ำทุก 750ms
+         นาน 30 วินาที — เห็นเป็นอาการกระตุกทุกหน้าที่ไม่ใช่ภาพรวม
+         ที่จริงหน้าถูกอยู่แล้ว แค่ชื่อเป็นคนละภาษาเท่านั้น */
+      var hit = function (x) {
+         x = String(x || '').replace(/^\/\/\s*/, '').trim();
+         return x === String(want[0]).trim() || x === String(want[1]).trim();
+      };
+      if (hit(cur)) { window.__laViewReady = true; return; }
       var fn = window.__laNavGo[s];
       if (typeof fn !== 'function') return;
       navSuppress = true;
