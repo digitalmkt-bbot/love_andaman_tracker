@@ -833,10 +833,15 @@
       /* เกณฑ์ว่าสำเร็จ ต้องดูผลบนจอ ไม่ใช่ว่าสั่งไปแล้ว */
       function repaintApplied() {
          var t = document.body.innerText || '';
-         if (/Plan\. Prioritize/.test(t)) return true;                 // การ์ดที่เขียนทับ
+         /* หน้าแรกมีการ์ดที่เราวาดเอง จึงเช็กตัวนั้นได้ตรง ๆ
+            ห้ามใช้ "เมนูเป็นไทย" เป็นเกณฑ์ในหน้านี้ เพราะตัวแปลกับการ์ด
+            ทำงานคนละจังหวะ เมนูแปลแล้วแต่การ์ดยังเป็นของเดิมได้ — เคยหยุดเร็วเกินไปเพราะเหตุนี้ */
+         var slug = (location.hash || '').slice(1);
+         if (!slug || slug === 'dashboard') return /Plan\. Prioritize/.test(t);
+         /* หน้าอื่นไม่มีการ์ดให้เช็ก ใช้เมนูที่ถูกแปลแทน */
          var lang = 'th';
          try { lang = localStorage.getItem('la_lang') || 'th'; } catch (e) {}
-         if (lang === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
+         if (lang === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;
          return false;
       }
       var repaintTries = 0, repaintCalls = 0;
