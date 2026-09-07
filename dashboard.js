@@ -225,6 +225,7 @@
    if (!document.getElementById('la-ref-layout')) document.head.appendChild(css);
 
    // ใส่ชื่อทีมข้างโลโก้ และขยายเนื้อหาเต็มจอเมื่อหน้านั้นไม่มีแผงขวา
+   var noRightMiss = 0;
    function syncLayout() {
       var hosts = document.querySelectorAll('div.flex.items-center');
       for (var i = 0; i < hosts.length; i++) {
@@ -237,8 +238,14 @@
             break;
          }
       }
+      /* ถอดระยะขอบขวาเฉพาะตอนที่ "ไม่มีแผงขวาจริง ๆ" เท่านั้น
+         ตอนเปิดหน้า เนื้อหาถูกวาดก่อนแผงขวาเสมอ ถ้าถอดทันทีที่หาไม่เจอ
+         การ์ดจะกว้างเต็มจอชั่วขณะ พอแผงขวาโผล่ตามมาก็ทับกันพอดี
+         จึงต้องหาไม่เจอติดกัน 2 รอบก่อน (~1 วินาที) ถึงจะเชื่อว่าไม่มีจริง
+         ส่วนตอนเจอ ใส่ระยะกลับทันที ไม่ต้องรอ */
       var right = document.querySelector('aside[class*="right-0"]');
-      document.body.classList.toggle('la-no-right', !right);
+      if (right) { noRightMiss = 0; document.body.classList.remove('la-no-right'); }
+      else if (++noRightMiss >= 2) { document.body.classList.add('la-no-right'); }
    }
    syncLayout();
    setInterval(syncLayout, 500);
