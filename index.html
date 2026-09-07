@@ -18,7 +18,20 @@
     <!-- เปิดการซ่อนกลับ: dashboard.js ทำงานหลังแอปวาดเสร็จ ถ้าไม่ซ่อน
          ผู้ใช้จะเห็นหน้าตาดั้งเดิม (เมนูข้าง ภาษาอังกฤษ) แวบหนึ่งทุกครั้งที่โหลด
          เปิดหน้าเมื่อของที่เขียนทับขึ้นจริง หรือครบเวลาสำรอง แล้วแต่อะไรถึงก่อน -->
-        <style id="la-boot-hide">body{opacity:0}</style>
+        <style id="la-boot-hide">body{opacity:0}
+        /* หน้าโหลด — อยู่นอก body จึงไม่โดนซ่อนไปด้วย
+           มีไว้ให้ระหว่างรอมีอะไรดู ไม่ใช่จอขาว จะได้รอได้นานพอ
+           สำหรับเครื่องช้าโดยไม่ต้องรีบเปิดหน้าที่ยังตกแต่งไม่เสร็จ */
+        #la-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:16px;transition:opacity .3s ease;
+          font-family:'IBM Plex Sans Thai',system-ui,-apple-system,sans-serif}
+        #la-splash .n{font-size:15px;font-weight:700;letter-spacing:-.01em}
+        #la-splash .b{width:150px;height:4px;border-radius:999px;overflow:hidden}
+        #la-splash .b i{display:block;height:100%;width:38%;border-radius:999px;
+          animation:la-sl 1.05s ease-in-out infinite}
+        @keyframes la-sl{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+        @media (prefers-reduced-motion:reduce){#la-splash .b i{animation:none;width:100%;opacity:.5}}
+        </style>
     <script>
       (function(){
         var dark=false; try{dark=localStorage.getItem('la_dark')==='1';}catch(e){}
@@ -31,7 +44,7 @@
           d.innerHTML='<svg width="48" height="48" viewBox="0 0 100 100"><circle cx="50" cy="28" r="19" fill="#8B5CF6"/><circle cx="71" cy="43" r="19" fill="#EC4899"/><circle cx="63" cy="69" r="19" fill="#F472B6"/><circle cx="37" cy="69" r="19" fill="#38BDF8"/><circle cx="29" cy="43" r="19" fill="#A78BFA"/><circle cx="50" cy="50" r="13" fill="#F5F3FF"/></svg>'+(nm?'<div class="n">'+nm+'</div>':'')+'<div class="b" style="background:'+tr+'"><i style="background:'+ac+'"></i></div>';
           document.documentElement.appendChild(d);
         }
-                // ไม่แสดงหน้าโหลดแล้ว — หน้าขึ้นทันที
+        mount();                 // แสดงหน้าโหลดทันที กันเห็นหน้าตาดั้งเดิมระหว่างรอ
         var done=false;
         // (ตัวแปร done ย้ายขึ้นไปบนแล้ว)
         window.__laReveal=function(){
@@ -41,8 +54,10 @@
           if(d){ d.style.opacity='0'; setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); },320); }
             setTimeout(function(){ var s=document.getElementById('la-boot-hide'); if(s&&s.parentNode) s.parentNode.removeChild(s); },400);
         };
-        // กันหน้าขาวค้าง: ถึงเวลานี้เปิดให้เสมอ ไม่ว่าอะไรจะเกิดขึ้น
-        setTimeout(function(){ window.__laReveal(); },2500);
+        /* กันค้าง: ถึงเวลานี้เปิดให้เสมอ ไม่ว่าอะไรจะเกิดขึ้น
+           ตั้งไว้ยาวได้เพราะระหว่างนี้เห็นหน้าโหลด ไม่ใช่จอขาว
+           เครื่องช้าจะได้ตกแต่งเสร็จก่อน ไม่เห็นหน้าตาดั้งเดิมแวบมา */
+        setTimeout(function(){ window.__laReveal(); },7000);
       })();
     </script>
     <!-- ตัด Tailwind CDN ออก (398 KB + คอมไพล์ในเบราว์เซอร์ทุกครั้ง) — ใช้ styles.css 21 KB แทน -->
