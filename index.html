@@ -654,6 +654,32 @@ button,a[role="button"]{min-height:40px}
     }
     window.laStartOrder = laStartOrder;
 
+    /* เก็บข้อมูลล่าสุดไว้ในเครื่อง เพื่อวาดหน้าได้ทันทีตอนเปิด ไม่ต้องรอเน็ต
+       ของใหม่มาถึงเมื่อไหร่ค่อยทับ — ผู้ใช้จึงไม่เจอ "กำลังโหลด..." ค้าง
+       ผูกกับ org_id ด้วย กันข้อมูลบริษัทหนึ่งไปโผล่ในอีกบริษัทตอนสลับบัญชี */
+    var LA_CACHE = 'la_state_cache_v1';
+    function laOrgId() {
+      try { var u = window.laUser && window.laUser(); return (u && u.org_id) || null; } catch (e) { return null; }
+    }
+    function laSaveCache(st) {
+      try {
+        var org = laOrgId();
+        if (!org) return;
+        var raw = JSON.stringify({ org: org, at: Date.now(), st: st });
+        if (raw.length > 1500000) return;        // ใหญ่เกินไปก็ไม่ต้องเก็บ
+        localStorage.setItem(LA_CACHE, raw);
+      } catch (e) {}
+    }
+    function laReadCache() {
+      try {
+        var org = laOrgId();
+        if (!org) return null;
+        var d = JSON.parse(localStorage.getItem(LA_CACHE) || 'null');
+        if (!d || !d.st || d.org !== org) return null;
+        return d.st;
+      } catch (e) { return null; }
+    }
+
     var _laCb = null, _laSig = '', _laTimer = null;
     function laFetchAll() {
       var q = '?deleted=is.false&order=updated_at.desc';
@@ -675,6 +701,7 @@ button,a[role="button"]{min-height:40px}
           _exists: true
         };
         laCountQuota(st);
+        laSaveCache(st);
         return st;
       });
     }
@@ -688,7 +715,14 @@ button,a[role="button"]{min-height:40px}
 
     window.fb = {
       subscribeState: function (cb) {
-        _laCb = cb; laPoll(true);
+        _laCb = cb;
+        /* วาดจากข้อมูลที่เคยโหลดไว้ก่อน แล้วค่อยยิงขอของจริง */
+        var cached = laReadCache();
+        if (cached) {
+          laCountQuota(cached);
+          try { cb(cached); } catch (e) {}
+        }
+        laPoll(true);
         if (_laTimer) clearInterval(_laTimer);
         _laTimer = setInterval(function () { laPoll(false); }, 15000);
         try {

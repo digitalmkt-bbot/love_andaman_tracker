@@ -237,10 +237,6 @@
             break;
          }
       }
-      /* ระหว่างที่ตัวบังคับวาดใหม่กำลังสลับหน้าอยู่ อย่าเพิ่งขยับระยะขอบขวา
-         หน้าที่สลับไปชั่วขณะไม่มีแผงขวา ถ้าถอดระยะออกตอนนั้น จะเห็นการ์ดกระโดด
-         ไปทับใต้ปฏิทินแวบหนึ่ง เดี๋ยวกลับมาหน้าเดิมแล้วค่อยคำนวณใหม่ */
-      if (repaintBusy) return;
       var right = document.querySelector('aside[class*="right-0"]');
       document.body.classList.toggle('la-no-right', !right);
    }
@@ -811,44 +807,23 @@
       // ===== 18. บังคับวาดหน้าใหม่ตอนเปิดครั้งแรก =====
       // ไฟล์นี้โหลดหลังแอปวาดเสร็จ การเขียนทับ component จึงยังไม่มีผลจนกว่าจะวาดรอบถัดไป
       // ที่นี่สลับเมนูไปกลับหนึ่งครั้งเพื่อให้วาดใหม่ด้วยธีมที่ถูกต้อง
+      /* บังคับให้ React วาดรอบใหม่ เพื่อให้หยิบคอมโพเนนต์ที่เราเขียนทับไปใช้
+
+         เดิมทำด้วยการกดปุ่มเมนู ซึ่งพาปัญหามาเป็นชุด:
+           · กดปุ่มของหน้าที่เปิดอยู่ → React เห็น state เดิม เลยไม่วาด (ไม่ได้ผลเลย)
+           · สลับไปหน้าอื่นแล้วกดกลับ → ได้ผล แต่หน้าที่แวะไปไม่มีแผงขวา
+             ระยะขอบเลยถูกถอดชั่วขณะ การ์ดกระโดดไปทับใต้ปฏิทิน
+
+         ที่จริงไม่ต้องแตะเมนูเลย — สั่งโหลดข้อมูลรอบใหม่ก็พอ
+         _refresh() ส่ง state object ใหม่เข้าแอป React จึงวาดใหม่ทั้งชุด
+         พิสูจน์ในหน้าเว็บจริงแล้ว: _refresh() ทำให้การ์ดถูกวาดใหม่ ส่วนการกดปุ่มหน้าเดิมไม่ */
       function forceRepaint() {
-         var labels = ['Dashboard', 'ภาพรวม'];
-         var other = ['Tracking', 'ติดตามงาน'];
-         function byText(list) {
-            var all = document.querySelectorAll('*');
-            for (var i = 0; i < all.length; i++) {
-               if (all[i].children.length === 0 && list.indexOf((all[i].textContent || '').trim()) !== -1) return all[i];
-            }
-            return null;
-         }
-         var a = byText(other), b2 = byText(labels);
-         if (!a || !b2) return false;
-         navSuppress = true;
-         /* เคยเปลี่ยนมาเป็น "กดปุ่มของหน้าปัจจุบันซ้ำ" โดยเข้าใจว่าได้ผลวาดใหม่เหมือนกัน
-            แต่ไม่จริง — React เห็นว่า state เดิม เลยข้ามการวาด คอมโพเนนต์ที่เราเขียนทับ
-            จึงไม่เคยถูกหยิบไปใช้ ต้องสลับไปหน้าอื่นก่อนแล้วกดกลับ ถึงจะ mount ใหม่จริง
-            ตัวเรียกจะยิงเข้ามาเฉพาะตอนที่ยังไม่สำเร็จ คนที่ปกติอยู่แล้วจึงไม่เห็นเมนูกระพริบ */
-         var slug = (location.hash || '').slice(1);
-         var idx = ['dashboard', 'tracking', 'planning', 'pr', 'report', 'history'].indexOf(slug);
-         if (idx < 0) idx = 0;
-         var navBtns = document.querySelectorAll('aside.fixed.left-0 nav button');
-         var self = navBtns[idx], away = navBtns[idx === 0 ? 1 : 0];
-         if (!self || !away) { navSuppress = false; return false; }
-         repaintBusy = true;
-         away.click();                                   // ออกไปหน้าอื่นเพื่อบังคับ unmount
-         setTimeout(function () {
-            self.click();                                // แล้วกลับมาหน้าเดิม
-            /* หน้าที่สลับไปไม่มีแผงขวา syncLayout จึงถอดระยะเว้นขวาออกชั่วขณะ
-               ถ้ารอรอบถัดไป (500ms) จะเห็นการ์ดล้นไปใต้ปฏิทินแวบหนึ่ง — เรียกทันทีเลย */
-            if (typeof syncLayout === 'function') { syncLayout(); setTimeout(syncLayout, 80); }
-            setTimeout(function () { navSuppress = false; repaintBusy = false; }, 300);
-         }, 60);
+         if (!window.fb || typeof window.fb._refresh !== 'function') return false;
+         window.fb._refresh();
          return true;
       }
-      /* เกณฑ์ว่า "สำเร็จ" ต้องดูที่ผลบนจอ ไม่ใช่ว่า React วาดใหม่หรือกดปุ่มไปแล้ว
-         แอปวาดใหม่เองตลอดเวลาด้วยเหตุผลของมัน แต่ตราบใดที่ต้นทางไม่ถูก mount ใหม่
-         มันก็ยังใช้คอมโพเนนต์ตัวเดิมที่จับไว้ก่อนเราเขียนทับ
-         จึงต้องเช็กของที่มองเห็นได้จริง: การ์ดที่เราวาดเอง หรือเมนูที่ถูกแปลแล้ว */
+
+      /* เกณฑ์ว่าสำเร็จ ต้องดูผลบนจอ ไม่ใช่ว่าสั่งไปแล้ว */
       function repaintApplied() {
          var t = document.body.innerText || '';
          if (/Plan\. Prioritize/.test(t)) return true;                 // การ์ดที่เขียนทับ
@@ -857,17 +832,16 @@
          if (lang === 'th' && /ภาพรวม|ติดตามงาน/.test(t)) return true;  // ตัวแปลทำงานแล้ว
          return false;
       }
-      var repaintTries = 0, repaintClicks = 0, repaintBusy = false;
+      var repaintTries = 0, repaintCalls = 0;
       var repaintTimer = setInterval(function () {
          repaintTries++;
          if (repaintApplied()) { clearInterval(repaintTimer); return; }
-         /* หน้าที่ยืนยันไม่ได้ (เช่นเลือก EN แล้วอยู่หน้าอื่น) กดสัก 5 ครั้งก็พอ
-            ไม่งั้นจะกดรัวไปเรื่อยโดยไม่มีทางรู้ว่าสำเร็จ */
-         if (repaintClicks >= 5 || repaintTries > 40) { clearInterval(repaintTimer); return; }
-         if (repaintBusy) return;                        // ลำดับสลับหน้าเดิมยังไม่จบ อย่าซ้อน
+         /* หน้าที่ยืนยันไม่ได้ (เลือก EN แล้วอยู่หน้าอื่น) สั่งสัก 5 ครั้งก็พอ */
+         if (repaintCalls >= 5 || repaintTries > 40) { clearInterval(repaintTimer); return; }
          if (document.querySelector('#la-login')) return;
-         if (forceRepaint()) repaintClicks++;
+         if (forceRepaint()) repaintCalls++;
       }, 500);
+
    // เลิกใช้ addPhotoButtons — การย้าย DOM ที่ React เป็นเจ้าของทำให้ปุ่มซ้ำจนค้าง
 
       // ===== 19. ปุ่มเปลี่ยนรูป — สร้างผ่าน React ไม่แตะ DOM =====
