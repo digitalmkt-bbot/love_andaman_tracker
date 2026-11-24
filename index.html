@@ -1457,10 +1457,26 @@ var getJobCategoryColor = function getJobCategoryColor(n) {
     return c.name === n;
   })) === null || _JOB_CATEGORIES$find === void 0 ? void 0 : _JOB_CATEGORIES$find.color) || '#B0AEA4';
 };
+var normYMD = function normYMD(dateStr) {
+  if (!dateStr) return '';
+  var m = String(dateStr).match(/^(\d{4})(-\d{2}-\d{2}.*)$/);
+  if (!m) return String(dateStr);
+  var y = parseInt(m[1], 10);
+  if (y > 2400) y -= 543;
+  return y + m[2];
+};
 var dayFromDate = function dayFromDate(dateStr) {
   if (!dateStr) return '';
-  var idx = new Date(dateStr).getDay();
+  var idx = new Date(normYMD(dateStr)).getDay();
   return DAYS[(idx + 6) % 7];
+};
+var _postDateMs = function postDateMs(dateStr, timeStr) {
+  if (!dateStr) return NaN;
+  var t = _postDateMs._ok(timeStr) ? timeStr : '00:00';
+  return new Date("".concat(normYMD(dateStr), "T").concat(t)).getTime();
+};
+_postDateMs._ok = function (t) {
+  return typeof t === 'string' && /^\d{2}:\d{2}/.test(t);
 };
 var T = {
   sidebarBg: '#E8ECEF',
@@ -2529,8 +2545,13 @@ function App() {
       return true;
     });
     arr.sort(function (a, b) {
-      var da = a.date ? new Date("".concat(a.date, "T").concat(a.time || '00:00')).getTime() : 0;
-      var db = b.date ? new Date("".concat(b.date, "T").concat(b.time || '00:00')).getTime() : 0;
+      var da = _postDateMs(a.date, a.time);
+      var db = _postDateMs(b.date, b.time);
+      var na = isNaN(da),
+        nb = isNaN(db);
+      if (na && nb) return 0;
+      if (na) return 1;
+      if (nb) return -1;
       return db - da;
     });
     return arr;
@@ -2642,9 +2663,13 @@ function App() {
     });
     var all = [].concat(_toConsumableArray(taskItems), _toConsumableArray(postItems));
     all.sort(function (a, b) {
-      var da = a.__itemType === 'task' ? a.deadline ? new Date(a.deadline).getTime() : -Infinity : a.date ? new Date(a.date).getTime() : -Infinity;
-      var db = b.__itemType === 'task' ? b.deadline ? new Date(b.deadline).getTime() : -Infinity : b.date ? new Date(b.date).getTime() : -Infinity;
-      return db - da;
+      var ad = a.__itemType === 'task' ? a.deadline : a.date;
+      var bd = b.__itemType === 'task' ? b.deadline : b.date;
+      var da = ad ? new Date(normYMD(ad)).getTime() : -Infinity;
+      var db = bd ? new Date(normYMD(bd)).getTime() : -Infinity;
+      var va = isNaN(da) ? -Infinity : da,
+        vb = isNaN(db) ? -Infinity : db;
+      return vb - va;
     });
     return all;
   }, [projectTasks, projectPosts, filterStatus, filterCategory, filterPerson, search]);
@@ -7064,7 +7089,7 @@ function PostRow(_ref63) {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
-  }).format(new Date(post.date)).replace(/\//g, '.') : '-';
+  }).format(new Date(normYMD(post.date))).replace(/\//g, '.') : '-';
   return React.createElement("tr", {
     onClick: onEdit,
     className: "border-t cursor-pointer hover:bg-slate-50 transition group",
